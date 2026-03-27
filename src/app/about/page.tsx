@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import NavClient from "../../components/NavClient";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -62,9 +63,9 @@ export default function AboutPage() {
         });
       });
 
-      // Horizontal scroll for timeline
+      // Horizontal scroll for timeline — desktop only
       const tl = document.querySelector(".timeline-track");
-      if (tl) {
+      if (tl && window.innerWidth > 900) {
         gsap.to(tl, {
           x: () => -(tl.scrollWidth - window.innerWidth + 80),
           ease: "none",
@@ -89,17 +90,7 @@ export default function AboutPage() {
   return (
     <div ref={mainRef}>
       {/* NAV */}
-      <nav className="nav scrolled" style={{background:"rgba(245,240,232,0.95)",backdropFilter:"blur(20px)"}}>
-        <a href="/" className="nav-logo">Palm Art Studio</a>
-        <ul className="nav-links">
-          <li><a href="/#gallery">Gallery</a></li>
-          <li><a href="/about" className="active">About</a></li>
-          <li><a href="/#shop">Shop</a></li>
-          <li><a href="/#community">Events</a></li>
-          <li><a href="/#contact">Contact</a></li>
-          <li><a href="/#shop" className="nav-cta">Shop Prints</a></li>
-        </ul>
-      </nav>
+      <NavClient theme="light" activeHref="/about" />
 
       {/* ═══ HERO ═══ */}
       <section style={{
@@ -163,14 +154,20 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ═══ COMMERCIAL CAREER — horizontal scroll timeline ═══ */}
-      <section className="timeline-section" style={{background:"#2A2520",overflow:"hidden",height:"100vh",position:"relative"}}>
-        <div style={{position:"absolute",top:"clamp(40px,6vw,80px)",left:"clamp(24px,5vw,80px)",zIndex:2}}>
+      {/* ═══ COMMERCIAL CAREER ═══ */}
+      <section className="timeline-section" style={{background:"#2A2520",overflow:"hidden",position:"relative"}}>
+        {/* Desktop: horizontal pin scroll. Mobile: vertical card stack */}
+        <style>{`
+          @media(min-width:901px){ .timeline-section{height:100vh;} .timeline-track{position:absolute;bottom:clamp(40px,6vw,80px);left:80px;padding-right:80px;} }
+          @media(max-width:900px){ .timeline-track{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;position:static!important;padding:0 16px 40px!important;} .client-card{min-width:unset!important;width:100%!important;} .timeline-header{position:static!important;padding:40px 16px 24px!important;} }
+          @media(max-width:500px){ .timeline-track{grid-template-columns:1fr!important;} }
+        `}</style>
+        <div className="timeline-header" style={{position:"absolute",top:"clamp(40px,6vw,80px)",left:"clamp(24px,5vw,80px)",zIndex:2,maxWidth:"60%"}}>
           <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C4A86E",marginBottom:12}}>Commercial Design &amp; Illustration</div>
           <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(1.8rem,3vw,2.6rem)",fontWeight:400,color:"#F5F0E8",marginBottom:12}}>The Professional Journey</h2>
-          <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.85rem",fontWeight:300,color:"#D4C9B8",maxWidth:500,lineHeight:1.7}}>My career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park, specializing in hand-drawn designs for packaging, logos, and brochures. As the industry evolved, I embraced the digital age, founding Storm Hill Studio in Maitland, FL.</p>
+          <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.85rem",fontWeight:300,color:"#D4C9B8",maxWidth:500,lineHeight:1.7}}>My career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park, specializing in hand-drawn designs for packaging, logos, and brochures.</p>
         </div>
-        <div className="timeline-track" style={{display:"flex",gap:24,position:"absolute",bottom:"clamp(40px,6vw,80px)",left:80,paddingRight:80}}>
+        <div className="timeline-track" style={{display:"flex",gap:24}}>
           {clients.map((c, i) => (
             <div key={i} className="client-card" style={{
               minWidth:320,width:320,background:"rgba(245,240,232,0.06)",border:"1px solid rgba(245,240,232,0.08)",
@@ -189,14 +186,15 @@ export default function AboutPage() {
         <div style={{position:"absolute",bottom:"clamp(30px,5vw,70px)",left:0,right:0,height:1,background:"rgba(245,240,232,0.06)"}} />
       </section>
 
-      {/* ═══ STATS — full bleed ═══ */}
+      {/* ═══ STATS ═══ */}
       <section style={{background:"linear-gradient(135deg,#3E5940 0%,#5A7A5E 50%,#8B9A7E 100%)",padding:"clamp(60px,8vw,100px) clamp(24px,5vw,80px)"}}>
         <div style={{maxWidth:1000,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:32,textAlign:"center"}}>
+          <style>{`@media(max-width:700px){.stats-grid{grid-template-columns:repeat(2,1fr)!important;gap:24px!important;}}`}</style>
           {[
             { val: 40, suffix: "+", label: "Years Creating Art" },
             { val: 14, suffix: "+", label: "Years Exhibiting" },
-            { val: 8, suffix: "", label: "Major Clients" },
-            { val: 5, suffix: "", label: "States Exhibited" },
+            { val: 8,  suffix: "", label: "Major Clients" },
+            { val: 5,  suffix: "", label: "States Exhibited" },
           ].map((s, i) => (
             <div key={i} className="reveal-up">
               <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:2}}>
@@ -207,7 +205,6 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
-        <style>{`@media(max-width:600px){section > div[style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,1fr)!important;}}`}</style>
       </section>
 
       {/* ═══ FINE ART & EXHIBITIONS ═══ */}

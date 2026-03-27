@@ -1,6 +1,6 @@
 @echo off
 cd /d C:\websites\palm-art-studio\site
 git add -A
-git commit -m "add admin PWA, api routes, supabase lib, manifest"
+git commit -m "shared NavClient, mobile nav fix all pages, GSAP upgrades, mobile layouts"
 git push origin main
-echo DONE
+echo EXIT: %ERRORLEVEL%

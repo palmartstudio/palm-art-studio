@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import NavClient from "../../components/NavClient";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -124,19 +125,55 @@ export default function GalleryPage() {
     return a.displayCategory === filter;
   });
 
-  // ─── GSAP intro (fires once data is ready) ───
+  // ─── GSAP card scroll animations ───
   useEffect(() => {
     if (loading) return;
     const ctx = gsap.context(() => {
-      gsap.from(".gh-line", { y: 80, opacity: 0, stagger: 0.08, duration: 1, ease: "power4.out", delay: 0.15 });
-      gsap.from(".gh-sub",  { y: 20, opacity: 0, duration: 0.7, ease: "power3.out", delay: 0.6 });
-      gsap.from(".gh-count",{ scale: 0, opacity: 0, duration: 0.5, ease: "back.out(2)", delay: 0.9 });
-      gsap.from(".filter-bar", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out", delay: 0.5 });
+      ScrollTrigger.create({
+        trigger: ".masonry-grid",
+        start: "top 90%",
+        onEnter: () => {
+          gsap.from(".art-card", {
+            y: 60, opacity: 0, scale: 0.94,
+            stagger: { amount: 0.8, from: "start" },
+            duration: 0.75, ease: "power3.out",
+          });
+        },
+        once: true,
+      });
     }, mainRef);
     return () => ctx.revert();
   }, [loading]);
 
-  // ─── Re-animate cards when filter changes ───
+  // ─── Hero + filter bar entrance ───
+  useEffect(() => {
+    if (loading) return;
+    const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+    tl.from(".gh-line",    { y: 80, opacity: 0, stagger: 0.1, duration: 1, delay: 0.1 })
+      .from(".gh-sub",     { y: 20, opacity: 0, duration: 0.7 }, "-=0.5")
+      .from(".gh-count",   { scale: 0, opacity: 0, duration: 0.5, ease: "back.out(2)" }, "-=0.4")
+      .from(".filter-bar", { y: 30, opacity: 0, duration: 0.6 }, "-=0.4");
+  }, [loading]);
+
+  // ─── GSAP card scroll animations ───
+  useEffect(() => {
+    if (loading) return;
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: ".masonry-grid",
+        start: "top 90%",
+        onEnter: () => {
+          gsap.from(".art-card", {
+            y: 60, opacity: 0, scale: 0.94,
+            stagger: { amount: 0.8, from: "start" },
+            duration: 0.75, ease: "power3.out",
+          });
+        },
+        once: true,
+      });
+    }, mainRef);
+    return () => ctx.revert();
+  }, [loading]);
   useEffect(() => {
     gsap.fromTo(".art-card",
       { y: 50, opacity: 0, scale: 0.95 },
@@ -147,17 +184,7 @@ export default function GalleryPage() {
   return (
     <div ref={mainRef}>
       {/* NAV */}
-      <nav className="nav scrolled" style={{background:"rgba(42,37,32,0.97)",backdropFilter:"blur(20px)"}}>
-        <a href="/" className="nav-logo" style={{color:"#F5F0E8"}}>Palm Art Studio</a>
-        <ul className="nav-links">
-          <li><a href="/gallery" className="active" style={{color:"#F5F0E8"}}>Gallery</a></li>
-          <li><a href="/about" style={{color:"#D4C9B8"}}>About</a></li>
-          <li><a href="/#shop" style={{color:"#D4C9B8"}}>Shop</a></li>
-          <li><a href="/#community" style={{color:"#D4C9B8"}}>Events</a></li>
-          <li><a href="/#contact" style={{color:"#D4C9B8"}}>Contact</a></li>
-          <li><a href="/#shop" className="nav-cta">Shop Prints</a></li>
-        </ul>
-      </nav>
+      <NavClient theme="dark" activeHref="/gallery" />
 
       {/* ═══ GALLERY HERO ═══ */}
       <section style={{
@@ -211,8 +238,8 @@ export default function GalleryPage() {
       </div>
 
       {/* ═══ MASONRY GRID ═══ */}
-      <section style={{background:"#1E1B17",padding:"clamp(40px,5vw,80px) clamp(24px,5vw,80px)",minHeight:"80vh"}}>
-        <div style={{maxWidth:1400,margin:"0 auto",columnCount:3,columnGap:20}}>
+      <section style={{background:"#1E1B17",padding:"clamp(40px,5vw,80px) clamp(16px,4vw,80px)",minHeight:"80vh"}}>
+        <div className="masonry-grid" style={{maxWidth:1400,margin:"0 auto",columnCount:3,columnGap:16}}>
           {filtered.map((art, i) => {
             const h = CARD_HEIGHTS[i % CARD_HEIGHTS.length];
             const isHovered = hoveredId === art._id;
@@ -255,7 +282,7 @@ export default function GalleryPage() {
                 )}
 
                 {/* Hover overlay */}
-                <div style={{
+                <div className="art-overlay" style={{
                   position:"absolute",inset:0,
                   background:"linear-gradient(to top, rgba(30,27,23,0.95) 0%, rgba(30,27,23,0.6) 40%, transparent 70%)",
                   opacity: isHovered ? 1 : 0,
@@ -299,9 +326,12 @@ export default function GalleryPage() {
         </div>
 
         <style>{`
-          @media(max-width:900px){ section > div[style*="column-count"]{ column-count:2!important; } }
-          @media(max-width:550px){ section > div[style*="column-count"]{ column-count:1!important; } }
+          .masonry-grid { column-count: 3; }
+          @media(max-width:900px){ .masonry-grid{ column-count:2!important; } }
+          @media(max-width:500px){ .masonry-grid{ column-count:1!important; } }
           @keyframes floatSlow{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,15px) scale(0.95)}}
+          /* always show overlay on mobile touch */
+          @media(max-width:900px){ .art-card .art-overlay{ opacity:1!important; } }
         `}</style>
       </section>
 
@@ -313,13 +343,16 @@ export default function GalleryPage() {
           display:"flex",alignItems:"center",justifyContent:"center",
           cursor:"pointer",animation:"fadeIn 0.3s ease",
         }}>
-          <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          <div onClick={e => e.stopPropagation()} style={{
-            maxWidth:900,width:"90%",display:"grid",gridTemplateColumns:"1.3fr 1fr",
-            background:"#2A2520",overflow:"hidden",cursor:"default",animation:"slideUp 0.4s ease",
+          <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+            .lightbox-inner{display:grid;grid-template-columns:1.3fr 1fr;}
+            @media(max-width:700px){.lightbox-inner{grid-template-columns:1fr;} .lightbox-art{aspect-ratio:4/3!important;max-height:260px;} .lightbox-detail{padding:24px 20px!important;} .lightbox-title{font-size:1.4rem!important;}}
+          `}</style>
+          <div onClick={e => e.stopPropagation()} className="lightbox-inner" style={{
+            maxWidth:900,width:"92%",
+            background:"#2A2520",overflow:"hidden",cursor:"default",animation:"slideUp 0.4s ease",maxHeight:"92vh",overflowY:"auto",
           }}>
             {/* Art preview */}
-            <div style={{aspectRatio:"3/4",background:selectedArt.color,position:"relative",overflow:"hidden"}}>
+            <div className="lightbox-art" style={{aspectRatio:"3/4",background:selectedArt.color,position:"relative",overflow:"hidden"}}>
               {selectedArt.imageUrl ? (
                 <img src={selectedArt.imageUrl} alt={selectedArt.title} style={{width:"100%",height:"100%",objectFit:"cover"}} />
               ) : (
@@ -332,11 +365,11 @@ export default function GalleryPage() {
               )}
             </div>
             {/* Details panel */}
-            <div style={{padding:"48px 40px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            <div className="lightbox-detail" style={{padding:"48px 40px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
               <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.65rem",fontWeight:500,letterSpacing:"0.15em",textTransform:"uppercase",color:"#C4A86E",marginBottom:12}}>
                 {selectedArt.displayCategory}{selectedArt.year ? ` · ${selectedArt.year}` : ""}
               </div>
-              <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"2rem",fontWeight:400,color:"#F5F0E8",marginBottom:8}}>{selectedArt.title}</h2>
+              <h2 className="lightbox-title" style={{fontFamily:"'DM Serif Display',serif",fontSize:"2rem",fontWeight:400,color:"#F5F0E8",marginBottom:8}}>{selectedArt.title}</h2>
               <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.85rem",color:"#B8AFA3",marginBottom:24}}>{selectedArt.displayMedium}</p>
               <div style={{width:40,height:1.5,background:"#C47D5A",marginBottom:24}} />
               <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.05rem",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",lineHeight:1.7,marginBottom:32}}>
