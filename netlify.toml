@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_PUBLIC_SANITY_PROJECT_ID = "mwzx64sx"
+  NEXT_PUBLIC_SANITY_DATASET = "production"
+  NEXT_PUBLIC_SANITY_API_VERSION = "2024-01-01"
+  NEXT_PUBLIC_SITE_URL = "https://palmartstudio.com"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
