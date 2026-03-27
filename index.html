@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palm Art Studio | Carolyn Jenkins — Artist & Designer</title>
+<meta name="description" content="Award-winning fine art by Carolyn Jenkins. From Disney World design to gallery exhibitions. Original paintings, prints, and commissions.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Outfit:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ivory: #F5F0E8;
+  --cream: #EDE7DB;
+  --warm-white: #FAF8F4;
+  --charcoal: #2A2520;
+  --espresso: #3D3530;
+  --sage: #8B9A7E;
+  --sage-light: #C5CFBC;
+  --terracotta: #C47D5A;
+  --terracotta-deep: #A86540;
+  --gold: #C4A86E;
+  --gold-light: #DCC99A;
+  --sand: #D4C9B8;
+  --mist: #B8AFA3;
+  --palm-green: #5A7A5E;
+  --palm-dark: #3E5940;
+  --font-display: 'DM Serif Display', serif;
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Outfit', sans-serif;
+  --nav-height: 72px;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--warm-white);
+  color: var(--charcoal);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── GRAIN OVERLAY ─── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ─── NAVIGATION ─── */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(24px, 4vw, 64px);
+  transition: background 0.5s ease, box-shadow 0.5s ease;
+}
+
+.nav.scrolled {
+  background: rgba(245, 240, 232, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 rgba(42, 37, 32, 0.08);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--charcoal);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: opacity 0.3s;
+}
+.nav-logo:hover { opacity: 0.7; }
+
+.nav-logo .palm-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: -2px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+  text-decoration: none;
+  position: relative;
+  padding: 4px 0;
+  transition: color 0.3s;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--terracotta);
+  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.nav-links a:hover::after,
+.nav-links a.active::after { width: 100%; }
+.nav-links a:hover { color: var(--terracotta); }
+
+.nav-cta {
+  font-size: 0.75rem !important;
+  letter-spacing: 0.14em !important;
+  background: var(--charcoal);
+  color: var(--warm-white) !important;
+  padding: 10px 24px !important;
+  border-radius: 0;
+  transition: background 0.3s, transform 0.3s !important;
+}
+.nav-cta::after { display: none !important; }
+.nav-cta:hover {
+  background: var(--terracotta) !important;
+  color: var(--warm-white) !important;
+  transform: translateY(-1px);
+}
+
+/* Mobile menu */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 8px;
+  z-index: 1001;
+}
+.menu-toggle span {
+  width: 24px;
+  height: 1.5px;
+  background: var(--charcoal);
+  transition: all 0.3s;
+}
+
+@media (max-width: 900px) {
+  .menu-toggle { display: flex; }
+  .nav-links {
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 32px;
+    background: var(--warm-white);
+    transform: translateX(100%);
+    transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .nav-links.open { transform: translateX(0); }
+  .nav-links a { font-size: 1.1rem; }
+}
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, var(--warm-white) 0%, var(--cream) 40%, var(--ivory) 100%);
+}
+
+.hero-bg-element {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  animation: floatSlow 20s ease-in-out infinite;
+}
+
+.hero-bg-1 {
+  width: 600px;
+  height: 600px;
+  background: var(--sage-light);
+  top: -200px;
+  right: -100px;
+}
+
+.hero-bg-2 {
+  width: 400px;
+  height: 400px;
+  background: var(--gold-light);
+  bottom: -100px;
+  left: -50px;
+  animation-delay: -7s;
+}
+
+.hero-bg-3 {
+  width: 300px;
+  height: 300px;
+  background: var(--terracotta);
+  opacity: 0.12;
+  top: 50%;
+  left: 50%;
+  animation-delay: -13s;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+.hero-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 clamp(24px, 5vw, 80px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-text { max-width: 600px; }
+
+.hero-eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.3s;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 32px;
+  height: 1.5px;
+  background: var(--terracotta);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--charcoal);
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.5s;
+}
+
+.hero-title em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 300;
+  color: var(--terracotta);
+}
+
+.hero-subtitle {
+  font-family: var(--font-heading);
+  font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.65;
+  color: var(--espresso);
+  opacity: 0.8;
+  margin-bottom: 48px;
+  max-width: 480px;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.7s;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.9s;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--charcoal);
+  color: var(--warm-white);
+  padding: 16px 36px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary:hover {
+  background: var(--terracotta);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(196, 125, 90, 0.25);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+  text-decoration: none;
+  padding: 16px 8px;
+  border-bottom: 1.5px solid var(--charcoal);
+  transition: all 0.3s;
+}
+.btn-secondary:hover {
+  color: var(--terracotta);
+  border-color: var(--terracotta);
+  padding-right: 16px;
+}
+.btn-secondary svg {
+  transition: transform 0.3s;
+}
+.btn-secondary:hover svg {
+  transform: translateX(4px);
+}
+
+/* Hero image gallery stack */
+.hero-gallery {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/4;
+  max-height: 650px;
+  opacity: 0;
+  animation: fadeUp 1s ease forwards 0.6s;
+}
+
+.hero-frame {
+  position: absolute;
+  background: var(--cream);
+  border: 1px solid rgba(42, 37, 32, 0.08);
+  box-shadow: 0 20px 60px rgba(42, 37, 32, 0.12);
+  overflow: hidden;
+  transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.6s ease;
+}
+.hero-frame:hover {
+  transform: translateY(-8px) rotate(0deg) !important;
+  box-shadow: 0 30px 80px rgba(42, 37, 32, 0.18);
+  z-index: 10;
+}
+
+.hero-frame-1 {
+  width: 75%;
+  height: 80%;
+  top: 5%;
+  left: 10%;
+  z-index: 3;
+  padding: 12px;
+}
+.hero-frame-2 {
+  width: 45%;
+  height: 50%;
+  bottom: 0;
+  right: 0;
+  z-index: 4;
+  transform: rotate(3deg);
+  padding: 8px;
+}
+.hero-frame-3 {
+  width: 35%;
+  height: 40%;
+  top: 0;
+  right: 5%;
+  z-index: 2;
+  transform: rotate(-4deg);
+  padding: 8px;
+}
+
+.hero-frame-inner {
+  width: 100%;
+  height: 100%;
+  background: var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--mist);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-frame-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding-top: 120px;
+    padding-bottom: 60px;
+  }
+  .hero-gallery { max-height: 400px; }
+}
+
+/* ─── SECTION STYLES ─── */
+section {
+  padding: clamp(80px, 10vw, 140px) clamp(24px, 5vw, 80px);
+}
+
+.section-header {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 64px;
+}
+
+.section-eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 20px;
+}
+
+.section-desc {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--espresso);
+  opacity: 0.75;
+}
+
+/* ─── FEATURED WORKS / GALLERY ─── */
+#gallery {
+  background: var(--charcoal);
+  color: var(--ivory);
+  position: relative;
+}
+
+#gallery .section-eyebrow { color: var(--gold); }
+#gallery .section-title { color: var(--ivory); }
+#gallery .section-desc { color: var(--sand); }
+
+.gallery-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--espresso);
+  aspect-ratio: 3/4;
+  group: gallery-card;
+}
+
+.gallery-item:nth-child(2) { aspect-ratio: 4/3; grid-row: span 1; }
+.gallery-item:nth-child(4) { aspect-ratio: 1/1; }
+.gallery-item:nth-child(5) { grid-column: span 2; aspect-ratio: 2/1; }
+
+.gallery-item-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--espresso);
+  transition: transform 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-item:hover .gallery-item-bg {
+  transform: scale(1.05);
+}
+
+.gallery-placeholder {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--mist);
+  opacity: 0.5;
+  text-align: center;
+  padding: 20px;
+}
+
+.gallery-item-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(42, 37, 32, 0.85) 0%, transparent 50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 28px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.gallery-item:hover .gallery-item-overlay { opacity: 1; }
+
+.gallery-item-title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--ivory);
+  margin-bottom: 4px;
+}
+
+.gallery-item-meta {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
+
+.gallery-item-price {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ivory);
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .gallery-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .gallery-item:nth-child(5) { grid-column: span 1; aspect-ratio: 3/4; }
+}
+@media (max-width: 500px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+}
+
+.gallery-cta {
+  text-align: center;
+  margin-top: 56px;
+}
+
+.gallery-cta .btn-primary {
+  background: var(--terracotta);
+}
+.gallery-cta .btn-primary:hover {
+  background: var(--gold);
+  color: var(--charcoal);
+}
+
+/* ─── ABOUT ─── */
+#about {
+  background: var(--ivory);
+}
+
+.about-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: clamp(40px, 6vw, 100px);
+  align-items: center;
+}
+
+.about-image {
+  aspect-ratio: 3/4;
+  background: var(--sand);
+  position: relative;
+  overflow: hidden;
+}
+
+.about-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  color: var(--mist);
+}
+
+.about-image::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 60%;
+  height: 40%;
+  border: 1.5px solid var(--terracotta);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+.about-body h3 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-weight: 400;
+  color: var(--charcoal);
+  margin-bottom: 24px;
+  line-height: 1.15;
+}
+
+.about-body h3 em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 300;
+  color: var(--terracotta);
+}
+
+.about-body p {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--espresso);
+  margin-bottom: 20px;
+}
+
+.about-credentials {
+  display: flex;
+  gap: 40px;
+  margin-top: 36px;
+  padding-top: 36px;
+  border-top: 1px solid var(--sand);
+}
+
+.credential {
+  text-align: center;
+}
+
+.credential-number {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  color: var(--terracotta);
+  line-height: 1;
+}
+
+.credential-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mist);
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .about-grid { grid-template-columns: 1fr; }
+  .about-image { max-height: 400px; }
+  .about-credentials { gap: 24px; }
+}
+
+/* ─── QUOTE BANNER ─── */
+.quote-banner {
+  background: linear-gradient(135deg, var(--palm-dark) 0%, var(--palm-green) 50%, var(--sage) 100%);
+  padding: clamp(60px, 8vw, 120px) clamp(24px, 5vw, 80px);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.quote-banner::before {
+  content: '\201C';
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-heading);
+  font-size: 20rem;
+  color: rgba(255,255,255,0.06);
+  line-height: 1;
+}
+
+.quote-text {
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--ivory);
+  max-width: 800px;
+  margin: 0 auto 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.quote-attr {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--sage-light);
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── SHOP / PRINTS ─── */
+#shop {
+  background: var(--warm-white);
+}
+
+.shop-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+}
+
+.shop-card {
+  background: var(--ivory);
+  border: 1px solid rgba(42, 37, 32, 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.5s ease;
+}
+.shop-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(42, 37, 32, 0.1);
+}
+
+.shop-card-image {
+  aspect-ratio: 1/1;
+  background: var(--sand);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-card-image .gallery-placeholder {
+  opacity: 0.4;
+}
+
+.shop-card-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--terracotta);
+  color: var(--warm-white);
+  padding: 6px 14px;
+}
+
+.shop-card-body {
+  padding: 24px;
+}
+
+.shop-card-title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+
+.shop-card-medium {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--mist);
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.shop-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shop-card-price {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.shop-card-price .original {
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--mist);
+  text-decoration: line-through;
+  margin-left: 8px;
+}
+
+.shop-card-cart {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--charcoal);
+  background: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.shop-card-cart:hover {
+  background: var(--charcoal);
+  color: var(--warm-white);
+}
+.shop-card-cart svg { transition: color 0.3s; }
+.shop-card-cart:hover svg { stroke: var(--warm-white); }
+
+/* ─── COMMUNITY / EVENTS ─── */
+#community {
+  background: var(--cream);
+}
+
+.events-list {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.event-item {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 32px;
+  align-items: center;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--sand);
+  transition: padding-left 0.3s ease;
+}
+.event-item:hover { padding-left: 16px; }
+.event-item:first-child { border-top: 1px solid var(--sand); }
+
+.event-date {
+  text-align: center;
+}
+
+.event-month {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+}
+
+.event-day {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--charcoal);
+  line-height: 1.1;
+}
+
+.event-info h4 {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 4px;
+}
+
+.event-info p {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--mist);
+}
+
+.event-action {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+  text-decoration: none;
+  border: 1.5px solid var(--charcoal);
+  padding: 10px 20px;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.event-action:hover {
+  background: var(--charcoal);
+  color: var(--ivory);
+}
+
+@media (max-width: 600px) {
+  .event-item {
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+  }
+  .event-action {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+}
+
+/* ─── NEWSLETTER ─── */
+.newsletter {
+  background: var(--charcoal);
+  padding: clamp(60px, 8vw, 100px) clamp(24px, 5vw, 80px);
+  text-align: center;
+}
+
+.newsletter h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  color: var(--ivory);
+  margin-bottom: 12px;
+}
+
+.newsletter p {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--sand);
+  margin-bottom: 36px;
+}
+
+.newsletter-form {
+  display: flex;
+  gap: 0;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.newsletter-form input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 16px 20px;
+  border: 1px solid rgba(245, 240, 232, 0.15);
+  background: rgba(245, 240, 232, 0.06);
+  color: var(--ivory);
+  outline: none;
+  transition: border-color 0.3s;
+}
+.newsletter-form input::placeholder { color: var(--mist); }
+.newsletter-form input:focus { border-color: var(--terracotta); }
+
+.newsletter-form button {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 16px 28px;
+  background: var(--terracotta);
+  color: var(--warm-white);
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.newsletter-form button:hover { background: var(--terracotta-deep); }
+
+@media (max-width: 500px) {
+  .newsletter-form {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* ─── CONTACT ─── */
+#contact {
+  background: var(--ivory);
+}
+
+.contact-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(40px, 6vw, 80px);
+}
+
+.contact-info h3 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--charcoal);
+  margin-bottom: 24px;
+}
+
+.contact-detail {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.contact-detail-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  flex-shrink: 0;
+}
+
+.contact-detail-text a {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--charcoal);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.contact-detail-text a:hover { color: var(--terracotta); }
+
+.contact-detail-text small {
+  font-size: 0.75rem;
+  color: var(--mist);
+  display: block;
+  margin-top: 2px;
+}
+
+.social-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.social-link {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--sand);
+  color: var(--charcoal);
+  text-decoration: none;
+  transition: all 0.3s;
+  font-size: 0.85rem;
+}
+.social-link:hover {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: var(--ivory);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contact-form input,
+.contact-form textarea {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 16px 20px;
+  border: 1px solid var(--sand);
+  background: var(--warm-white);
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.3s;
+  resize: vertical;
+}
+.contact-form input:focus,
+.contact-form textarea:focus { border-color: var(--terracotta); }
+
+.contact-form textarea { min-height: 140px; }
+
+.contact-form .btn-primary { align-self: flex-start; }
+
+@media (max-width: 768px) {
+  .contact-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── FOOTER ─── */
+.footer {
+  background: var(--charcoal);
+  padding: 48px clamp(24px, 5vw, 80px) 32px;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--ivory);
+}
+
+.footer-links {
+  display: flex;
+  gap: 28px;
+  list-style: none;
+}
+
+.footer-links a {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--sand);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.footer-links a:hover { color: var(--ivory); }
+
+.footer-copy {
+  width: 100%;
+  text-align: center;
+  padding-top: 32px;
+  margin-top: 24px;
+  border-top: 1px solid rgba(245, 240, 232, 0.08);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--mist);
+  letter-spacing: 0.05em;
+}
+
+/* ─── SCROLL ANIMATIONS ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── CUSTOM SCROLLBAR ─── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--sand); }
+::-webkit-scrollbar-thumb:hover { background: var(--mist); }
+
+/* ─── SELECTION ─── */
+::selection {
+  background: var(--terracotta);
+  color: var(--warm-white);
+}
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav" id="nav">
+  <a href="#" class="nav-logo">
+    <svg class="palm-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M12 22V8M12 8c-2-4-6-6-9-5 3-1 6 0 9 5zM12 8c2-4 6-6 9-5-3-1-6 0-9 5zM12 12c-3-2-7-1-9 1 2-2 5-3 9-1zM12 12c3-2 7-1 9 1-2-2-5-3-9-1z"/>
+    </svg>
+    Palm Art Studio
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#gallery">Gallery</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#shop">Shop</a></li>
+    <li><a href="#community">Events</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#shop" class="nav-cta">Shop Prints</a></li>
+  </ul>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg-element hero-bg-1"></div>
+  <div class="hero-bg-element hero-bg-2"></div>
+  <div class="hero-bg-element hero-bg-3"></div>
+  
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="hero-eyebrow">Carolyn Jenkins</div>
+      <h1 class="hero-title">Art from the <em>Soul</em></h1>
+      <p class="hero-subtitle">"It doesn't matter what others think—create for yourself. It is good for the soul and well-being. Feel the freedom!"</p>
+      <div class="hero-actions">
+        <a href="#gallery" class="btn-primary">
+          Explore the Gallery
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a href="#shop" class="btn-secondary">
+          Shop Originals & Prints
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </div>
+    
+    <div class="hero-gallery">
+      <div class="hero-frame hero-frame-1">
+        <div class="hero-frame-inner">
+          <span>Featured Artwork<br><small style="font-size:0.75rem;opacity:0.6">Upload your hero image</small></span>
+        </div>
+      </div>
+      <div class="hero-frame hero-frame-2">
+        <div class="hero-frame-inner">
+          <span>Detail</span>
+        </div>
+      </div>
+      <div class="hero-frame hero-frame-3">
+        <div class="hero-frame-inner">
+          <span>Studio</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section id="gallery">
+  <div class="section-header reveal">
+    <div class="section-eyebrow">Featured Works</div>
+    <h2 class="section-title">The Collection</h2>
+    <p class="section-desc">From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul.</p>
+  </div>
+  
+  <div class="gallery-grid">
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Watercolor — Victorian Home</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Victorian Dawn</div>
+        <div class="gallery-item-meta">Watercolor on Paper · 18 × 24 in</div>
+        <div class="gallery-item-price">$1,200</div>
+      </div>
+    </div>
+    
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Mixed Media — Abstract</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Emotional Currents</div>
+        <div class="gallery-item-meta">Mixed Media · 24 × 36 in</div>
+        <div class="gallery-item-price">$1,800</div>
+      </div>
+    </div>
+    
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Watercolor — Historic Building</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Old Florida</div>
+        <div class="gallery-item-meta">Watercolor on Paper · 16 × 20 in</div>
+        <div class="gallery-item-price">$950</div>
+      </div>
+    </div>
+    
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Recycled Materials — Sculpture</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Second Life</div>
+        <div class="gallery-item-meta">Recycled Mixed Media</div>
+        <div class="gallery-item-price">$750</div>
+      </div>
+    </div>
+    
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Panoramic — Landscape Series</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Horizon Line</div>
+        <div class="gallery-item-meta">Watercolor on Paper · 12 × 36 in</div>
+        <div class="gallery-item-price">$1,400</div>
+      </div>
+    </div>
+    
+    <div class="gallery-item reveal">
+      <div class="gallery-item-bg">
+        <span class="gallery-placeholder">Daily Painting Series</span>
+      </div>
+      <div class="gallery-item-overlay">
+        <div class="gallery-item-title">Daily Study #47</div>
+        <div class="gallery-item-meta">Acrylic on Board · 8 × 10 in</div>
+        <div class="gallery-item-price">$350</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="gallery-cta reveal">
+    <a href="#" class="btn-primary">View Full Collection</a>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-grid">
+    <div class="about-image reveal">
+      <div class="about-image-placeholder">Artist Portrait</div>
+    </div>
+    <div class="about-body reveal">
+      <div class="section-eyebrow">The Artist</div>
+      <h3>From Disney to <em>Fine Art</em></h3>
+      <p>Carolyn Jenkins is an award-winning artist based in Central Florida, where she studied privately with artists at Crealdé School of Art, Rollins College, and Maitland Art Center.</p>
+      <p>Her career spans from design work at Disney World to award-winning watercolors of historic Florida architecture, Victorian-era homes, and mixed-media pieces that push boundaries. A daily painter who continually exceeds her own limitations and imagination.</p>
+      <p>Carolyn's work is deeply personal — an expression of emotion, a method of communication, pure heart and soul on canvas. She also incorporates recycled materials into her paintings, exploring as far as creativity allows.</p>
+      
+      <div class="about-credentials">
+        <div class="credential">
+          <div class="credential-number">40+</div>
+          <div class="credential-label">Years Creating</div>
+        </div>
+        <div class="credential">
+          <div class="credential-number">12</div>
+          <div class="credential-label">Awards Won</div>
+        </div>
+        <div class="credential">
+          <div class="credential-number">6</div>
+          <div class="credential-label">States Exhibited</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE BANNER -->
+<div class="quote-banner">
+  <p class="quote-text">"It doesn't matter what others think—create for yourself. It is good for the soul and well-being. Feel the freedom!"</p>
+  <div class="quote-attr">— Carolyn Jenkins</div>
+</div>
+
+<!-- SHOP -->
+<section id="shop">
+  <div class="section-header reveal">
+    <div class="section-eyebrow">Shop</div>
+    <h2 class="section-title">Bring Art Home</h2>
+    <p class="section-desc">Original paintings, limited edition prints, and commissions. Each piece is signed and ships with a certificate of authenticity.</p>
+  </div>
+  
+  <div class="shop-grid">
+    <div class="shop-card reveal">
+      <div class="shop-card-image">
+        <span class="gallery-placeholder">Watercolor Print</span>
+        <div class="shop-card-badge">Limited Edition</div>
+      </div>
+      <div class="shop-card-body">
+        <div class="shop-card-title">Victorian Dawn — Print</div>
+        <div class="shop-card-medium">Giclée on Archival Paper · 18 × 24 in</div>
+        <div class="shop-card-footer">
+          <div class="shop-card-price">$85</div>
+          <button class="shop-card-cart" aria-label="Add to cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="shop-card reveal">
+      <div class="shop-card-image">
+        <span class="gallery-placeholder">Original Painting</span>
+        <div class="shop-card-badge">Original</div>
+      </div>
+      <div class="shop-card-body">
+        <div class="shop-card-title">Emotional Currents</div>
+        <div class="shop-card-medium">Mixed Media on Canvas · 24 × 36 in</div>
+        <div class="shop-card-footer">
+          <div class="shop-card-price">$1,800</div>
+          <button class="shop-card-cart" aria-label="Add to cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="shop-card reveal">
+      <div class="shop-card-image">
+        <span class="gallery-placeholder">Art Print Set</span>
+      </div>
+      <div class="shop-card-body">
+        <div class="shop-card-title">Florida Collection — Set of 3</div>
+        <div class="shop-card-medium">Giclée Prints · 11 × 14 in each</div>
+        <div class="shop-card-footer">
+          <div class="shop-card-price">$180 <span class="original">$225</span></div>
+          <button class="shop-card-cart" aria-label="Add to cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="shop-card reveal">
+      <div class="shop-card-image">
+        <span class="gallery-placeholder">Commission Slot</span>
+      </div>
+      <div class="shop-card-body">
+        <div class="shop-card-title">Custom Commission</div>
+        <div class="shop-card-medium">Watercolor or Mixed Media · Your Subject</div>
+        <div class="shop-card-footer">
+          <div class="shop-card-price">From $500</div>
+          <button class="shop-card-cart" aria-label="Inquire">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMUNITY / EVENTS -->
+<section id="community">
+  <div class="section-header reveal">
+    <div class="section-eyebrow">Community</div>
+    <h2 class="section-title">Shows & Events</h2>
+    <p class="section-desc">Join Carolyn at upcoming exhibitions, art festivals, and studio events across the country.</p>
+  </div>
+  
+  <div class="events-list">
+    <div class="event-item reveal">
+      <div class="event-date">
+        <div class="event-month">Apr</div>
+        <div class="event-day">12</div>
+      </div>
+      <div class="event-info">
+        <h4>CityArts Spring Exhibition</h4>
+        <p>Orlando, FL · Gallery Opening Reception</p>
+      </div>
+      <a href="#" class="event-action">RSVP</a>
+    </div>
+    
+    <div class="event-item reveal">
+      <div class="event-date">
+        <div class="event-month">May</div>
+        <div class="event-day">03</div>
+      </div>
+      <div class="event-info">
+        <h4>Central Florida Art Festival</h4>
+        <p>Winter Park, FL · Outdoor Booth #42</p>
+      </div>
+      <a href="#" class="event-action">Details</a>
+    </div>
+    
+    <div class="event-item reveal">
+      <div class="event-date">
+        <div class="event-month">Jun</div>
+        <div class="event-day">18</div>
+      </div>
+      <div class="event-info">
+        <h4>Studio Open House</h4>
+        <p>Palm Art Studio · Meet the Artist, Live Painting</p>
+      </div>
+      <a href="#" class="event-action">RSVP</a>
+    </div>
+    
+    <div class="event-item reveal">
+      <div class="event-date">
+        <div class="event-month">Aug</div>
+        <div class="event-day">22</div>
+      </div>
+      <div class="event-info">
+        <h4>Midwest Art Tour</h4>
+        <p>Michigan & Wisconsin · Multiple Venues</p>
+      </div>
+      <a href="#" class="event-action">Learn More</a>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<div class="newsletter">
+  <h3>Stay in the Studio</h3>
+  <p>New works, behind-the-scenes stories, and exhibition announcements — delivered to your inbox.</p>
+  <div class="newsletter-form">
+    <input type="email" placeholder="Your email address" aria-label="Email address">
+    <button type="button">Subscribe</button>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-header reveal">
+    <div class="section-eyebrow">Get in Touch</div>
+    <h2 class="section-title">Let's Connect</h2>
+    <p class="section-desc">Interested in a commission, a purchase, or just want to talk art? Reach out anytime.</p>
+  </div>
+  
+  <div class="contact-grid">
+    <div class="contact-info reveal">
+      <h3>Palm Art Studio</h3>
+      
+      <div class="contact-detail">
+        <div class="contact-detail-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </div>
+        <div class="contact-detail-text">
+          <a href="tel:3522179709">(352) 217-9709</a>
+          <small>Call or Text</small>
+        </div>
+      </div>
+      
+      <div class="contact-detail">
+        <div class="contact-detail-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="contact-detail-text">
+          <a href="/cdn-cgi/l/email-protection#ec8f86ac9c8d80818d9e989f9899888583c28f8381"><span class="__cf_email__" data-cfemail="21424b6151404d4c40535552555445484e0f424e4c">[email&#160;protected]</span></a>
+          <small>For inquiries & commissions</small>
+        </div>
+      </div>
+      
+      <div class="contact-detail">
+        <div class="contact-detail-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="contact-detail-text">
+          <a href="#">Central Florida</a>
+          <small>Studio visits by appointment</small>
+        </div>
+      </div>
+      
+      <div class="social-links">
+        <a href="#" class="social-link" aria-label="TikTok">TT</a>
+        <a href="#" class="social-link" aria-label="Instagram">IG</a>
+        <a href="#" class="social-link" aria-label="Saatchi Art">SA</a>
+        <a href="#" class="social-link" aria-label="Facebook">FB</a>
+      </div>
+    </div>
+    
+    <div class="contact-form reveal">
+      <input type="text" placeholder="Your Name" aria-label="Name">
+      <input type="email" placeholder="Email Address" aria-label="Email">
+      <input type="text" placeholder="Subject — Commission, Purchase, Other" aria-label="Subject">
+      <textarea placeholder="Tell me about what you're looking for..." aria-label="Message"></textarea>
+      <button class="btn-primary" type="button">Send Message</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">Palm Art Studio</div>
+    <ul class="footer-links">
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#shop">Shop</a></li>
+      <li><a href="#community">Events</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 Palm Art Studio — Carolyn Jenkins. All rights reserved.</div>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Nav scroll effect
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Mobile menu
+const menuToggle = document.getElementById('menuToggle');
+const navLinks = document.getElementById('navLinks');
+menuToggle.addEventListener('click', () => {
+  navLinks.classList.toggle('open');
+});
+navLinks.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => navLinks.classList.remove('open'));
+});
+
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => {
+        entry.target.classList.add('visible');
+      }, i * 80);
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+reveals.forEach(el => revealObserver.observe(el));
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      const offset = 72;
+      const pos = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: pos, behavior: 'smooth' });
+    }
+  });
+});
+
+// Active nav link on scroll
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+  const scrollPos = window.scrollY + 100;
+  sections.forEach(section => {
+    const top = section.offsetTop;
+    const height = section.offsetHeight;
+    const id =
