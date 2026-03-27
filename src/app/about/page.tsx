@@ -96,7 +96,7 @@ export default function AboutPage() {
       <section style={{
         minHeight:"100vh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center",
         background:"linear-gradient(165deg, #FAF8F4 0%, #EDE7DB 50%, #F5F0E8 100%)",
-        padding:"140px 24px 80px", textAlign:"center", position:"relative", overflow:"hidden",
+        padding:"clamp(100px,20vw,140px) clamp(20px,5vw,80px) clamp(60px,8vw,80px)", textAlign:"center", position:"relative", overflow:"hidden",
       }}>
         {/* Decorative circles */}
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:"1px solid rgba(196,125,90,0.08)",top:"-10%",right:"-8%"}} />
@@ -120,15 +120,17 @@ export default function AboutPage() {
         <style>{`@keyframes bobDown{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}`}</style>
       </section>
 
-      {/* ═══ ORIGIN STORY — full-bleed two column ═══ */}
-      <section style={{background:"#F5F0E8",padding:"clamp(80px,10vw,140px) 0",overflow:"hidden"}}>
-        <div style={{maxWidth:1300,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1.2fr",gap:"clamp(40px,6vw,100px)",padding:"0 clamp(24px,5vw,80px)",alignItems:"start"}}>
-          {/* Portrait — parallax */}
+      {/* ═══ ORIGIN STORY ═══ */}
+      <section style={{background:"#F5F0E8",padding:"clamp(60px,10vw,140px) 0",overflow:"hidden"}}>
+        <style>{`
+          .story-grid{display:grid;grid-template-columns:1fr 1.2fr;}
+          @media(max-width:768px){.story-grid{grid-template-columns:1fr!important;} .portrait-wrap{position:static!important;} .portrait-wrap > div{max-height:280px!important;aspect-ratio:4/3!important;} }
+        `}</style>
+        <div className="story-grid" style={{maxWidth:1300,margin:"0 auto",gap:"clamp(40px,6vw,100px)",padding:"0 clamp(20px,5vw,80px)",alignItems:"start"}}>
+          {/* Portrait */}
           <div className="portrait-wrap reveal-up" style={{position:"sticky",top:100}}>
-            <div style={{aspectRatio:"3/4",background:"#D4C9B8",overflow:"hidden",position:"relative"}}>
+            <div style={{aspectRatio:"3/4",background:"#D4C9B8",overflow:"hidden",position:"relative",maxHeight:"70vh"}}>
               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",color:"#B8AFA3",fontSize:"1rem"}}>Artist Portrait</div>
-              {/* Decorative frame offset */}
-              <div style={{position:"absolute",bottom:-16,right:-16,width:"70%",height:"50%",border:"1.5px solid #C47D5A",opacity:0.25,zIndex:-1}} />
             </div>
           </div>
           {/* Story text */}

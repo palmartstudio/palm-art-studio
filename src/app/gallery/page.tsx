@@ -125,26 +125,6 @@ export default function GalleryPage() {
     return a.displayCategory === filter;
   });
 
-  // ─── GSAP card scroll animations ───
-  useEffect(() => {
-    if (loading) return;
-    const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: ".masonry-grid",
-        start: "top 90%",
-        onEnter: () => {
-          gsap.from(".art-card", {
-            y: 60, opacity: 0, scale: 0.94,
-            stagger: { amount: 0.8, from: "start" },
-            duration: 0.75, ease: "power3.out",
-          });
-        },
-        once: true,
-      });
-    }, mainRef);
-    return () => ctx.revert();
-  }, [loading]);
-
   // ─── Hero + filter bar entrance ───
   useEffect(() => {
     if (loading) return;
@@ -188,28 +168,28 @@ export default function GalleryPage() {
 
       {/* ═══ GALLERY HERO ═══ */}
       <section style={{
-        minHeight:"60vh", display:"flex", flexDirection:"column", justifyContent:"flex-end",
-        background:"#2A2520", padding:"140px clamp(24px,5vw,80px) 48px", position:"relative", overflow:"hidden"
+        minHeight:"clamp(320px,50vh,60vh)", display:"flex", flexDirection:"column", justifyContent:"flex-end",
+        background:"#2A2520", padding:"clamp(100px,18vw,140px) clamp(16px,4vw,80px) clamp(32px,4vw,48px)", position:"relative", overflow:"hidden"
       }}>
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,125,90,0.12),transparent 70%)",top:"-15%",right:"-10%",animation:"floatSlow 20s ease-in-out infinite"}} />
         <div style={{position:"absolute",width:350,height:350,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,154,126,0.1),transparent 70%)",bottom:"-10%",left:"-5%",animation:"floatSlow 20s ease-in-out infinite",animationDelay:"-8s"}} />
 
         <div style={{maxWidth:1400,margin:"0 auto",width:"100%",position:"relative",zIndex:1}}>
-          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:24}}>
-            <div>
-              <div className="gh-line" style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C4A86E",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
-                <span style={{width:32,height:1.5,background:"#C4A86E",display:"inline-block"}} /> The Collection
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="gh-line" style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.7rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C4A86E",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+                <span style={{width:24,height:1.5,background:"#C4A86E",display:"inline-block",flexShrink:0}} /> The Collection
               </div>
-              <h1 className="gh-line" style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(3rem,6vw,5rem)",fontWeight:400,color:"#F5F0E8",lineHeight:1.05,margin:0}}>
+              <h1 className="gh-line" style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(2.2rem,6vw,5rem)",fontWeight:400,color:"#F5F0E8",lineHeight:1.05,margin:0}}>
                 Art <em style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:300,fontStyle:"italic",color:"#C47D5A"}}>Gallery</em>
               </h1>
-              <p className="gh-sub" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.15rem",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",marginTop:16,maxWidth:500,lineHeight:1.7}}>
+              <p className="gh-sub" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1rem,2vw,1.15rem)",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",marginTop:12,maxWidth:500,lineHeight:1.7}}>
                 Original watercolors, acrylics, and mixed media — each piece carries emotion, story, and soul.
               </p>
             </div>
-            <div className="gh-count" style={{display:"flex",alignItems:"baseline",gap:8,fontFamily:"'DM Serif Display',serif",color:"#F5F0E8"}}>
-              <span style={{fontSize:"3.5rem",lineHeight:1}}>{filtered.length}</span>
-              <span style={{fontSize:"1rem",color:"#B8AFA3",fontFamily:"'Outfit',sans-serif",fontWeight:300,letterSpacing:"0.05em"}}>works</span>
+            <div className="gh-count" style={{display:"flex",alignItems:"baseline",gap:6,fontFamily:"'DM Serif Display',serif",color:"#F5F0E8",flexShrink:0}}>
+              <span style={{fontSize:"clamp(2.5rem,8vw,3.5rem)",lineHeight:1}}>{filtered.length}</span>
+              <span style={{fontSize:"0.9rem",color:"#B8AFA3",fontFamily:"'Outfit',sans-serif",fontWeight:300,letterSpacing:"0.05em"}}>works</span>
             </div>
           </div>
         </div>
@@ -218,20 +198,18 @@ export default function GalleryPage() {
       {/* ═══ FILTER BAR ═══ */}
       <div className="filter-bar" style={{
         background:"#2A2520",borderBottom:"1px solid rgba(245,240,232,0.06)",
-        padding:"0 clamp(24px,5vw,80px)",position:"sticky",top:72,zIndex:100
+        padding:"0 clamp(12px,4vw,80px)",position:"sticky",top:72,zIndex:100
       }}>
-        <div style={{maxWidth:1400,margin:"0 auto",display:"flex",gap:0,overflowX:"auto"}}>
+        <div style={{maxWidth:1400,margin:"0 auto",display:"flex",gap:0,overflowX:"auto",WebkitOverflowScrolling:"touch" as any}}>
           {FILTER_CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setFilter(cat)}
               style={{
-                fontFamily:"'Outfit',sans-serif",fontSize:"0.75rem",fontWeight:filter===cat?600:400,
-                letterSpacing:"0.1em",textTransform:"uppercase",
+                fontFamily:"'Outfit',sans-serif",fontSize:"clamp(0.65rem,2vw,0.75rem)",fontWeight:filter===cat?600:400,
+                letterSpacing:"0.08em",textTransform:"uppercase",
                 color:filter===cat?"#C47D5A":"#B8AFA3",
                 background:"none",border:"none",borderBottom:filter===cat?"2px solid #C47D5A":"2px solid transparent",
-                padding:"18px 24px",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.3s ease",
+                padding:"clamp(12px,3vw,18px) clamp(12px,3vw,24px)",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.3s ease",
               }}
-              onMouseEnter={e=>{if(filter!==cat)(e.target as HTMLElement).style.color="#F5F0E8"}}
-              onMouseLeave={e=>{if(filter!==cat)(e.target as HTMLElement).style.color="#B8AFA3"}}
             >{cat}</button>
           ))}
         </div>
