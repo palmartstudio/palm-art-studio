@@ -34,7 +34,7 @@ export default async function Home() {
         <a href="#" className="nav-logo">Palm Art Studio</a>
         <ul className="nav-links" id="navLinks">
           <li><a href="#gallery">Gallery</a></li>
-          <li><a href="#about">About</a></li>
+          <li><a href="/about">About</a></li>
           <li><a href="#shop">Shop</a></li>
           <li><a href="#community">Events</a></li>
           <li><a href="#contact">Contact</a></li>
@@ -305,7 +305,7 @@ export default async function Home() {
           <div className="footer-logo">Palm Art Studio</div>
           <ul className="footer-links">
             <li><a href="#gallery">Gallery</a></li>
-            <li><a href="#about">About</a></li>
+            <li><a href="/about">About</a></li>
             <li><a href="#shop">Shop</a></li>
             <li><a href="#community">Events</a></li>
             <li><a href="#contact">Contact</a></li>
