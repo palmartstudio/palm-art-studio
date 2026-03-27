@@ -651,23 +651,77 @@ function ShopManager() {
 // ─── Site Editor ───
 function SiteEditor() {
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [artist, setArtist] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [portraitPreview, setPortraitPreview] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const portraitRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/admin/settings").then(r => r.json()).then(setSettings).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/admin/settings").then(r => r.json()).catch(() => ({})),
+      fetch("/api/admin/artist").then(r => r.json()).catch(() => ({})),
+    ]).then(([s, a]) => {
+      setSettings(s || {});
+      setArtist(a || {});
+      if (a?.portrait?.asset?._ref) {
+        // show existing portrait from Sanity CDN
+        fetch(`/api/admin/upload-config`).then(r => r.json()).then(({ dataset }) => {
+          const ref = a.portrait.asset._ref.replace("image-", "").replace(/-(\w+)$/, ".$1").replace(/-(\d+x\d+)-/, "-$1-");
+          setPortraitPreview(`https://cdn.sanity.io/images/mwzx64sx/${dataset}/${a.portrait.asset._ref.replace("image-","").replace(/-(\w+)$/,".$1")}`);
+        }).catch(() => {});
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
-  const saveField = async (field: string, value: string) => {
+  const saveSettings = async (field: string, value: string) => {
     setSaving(field);
     await fetch("/api/admin/settings", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ field, value }),
     });
-    setSaving(null);
-    setSaved(field);
-    setTimeout(() => setSaved(null), 2000);
+    setSaving(null); setSaved(field); setTimeout(() => setSaved(null), 2000);
+  };
+
+  const saveArtist = async (field: string, value: string) => {
+    setSaving(`a_${field}`);
+    await fetch("/api/admin/artist", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value }),
+    });
+    setSaving(null); setSaved(`a_${field}`); setTimeout(() => setSaved(null), 2000);
+  };
+
+  const handlePortraitUpload = async (file: File) => {
+    setUploading(true); setUploadProgress(0);
+    try {
+      const configRes = await fetch("/api/admin/upload-config");
+      const { token, dataset, apiVersion } = await configRes.json();
+      const assetData = await new Promise<{ _id: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100)); };
+        xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText).document); } catch { reject(); } } else { reject(); } };
+        xhr.onerror = reject;
+        xhr.send(file);
+      });
+      // Save image ref to artistBio
+      await fetch("/api/admin/artist", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field: "portrait", imageAssetId: assetData._id }),
+      });
+      // Show preview
+      const reader = new FileReader();
+      reader.onload = e => setPortraitPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+      setSaved("portrait"); setTimeout(() => setSaved(null), 2000);
+    } catch { alert("Upload failed"); }
+    finally { setUploading(false); setUploadProgress(0); }
   };
 
   const Section = ({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) => (
@@ -678,22 +732,24 @@ function SiteEditor() {
     </div>
   );
 
-  const Field = ({ k, label, multi }: { k: string; label: string; multi?: boolean }) => {
-    const [val, setVal] = useState(settings[k] || "");
-    useEffect(() => { setVal(settings[k] || ""); }, [settings[k]]);
-    const isSaving = saving === k;
-    const isSaved = saved === k;
+  const Field = ({ k, label, multi, api }: { k: string; label: string; multi?: boolean; api?: "artist" | "settings" }) => {
+    const source = api === "artist" ? artist : settings;
+    const saveFn  = api === "artist" ? saveArtist : saveSettings;
+    const savedKey = api === "artist" ? `a_${k}` : k;
+    const [val, setVal] = useState(source[k] || "");
+    useEffect(() => { setVal(source[k] || ""); }, [source[k]]);
+    const isSaving = saving === savedKey;
+    const isSaved  = saved  === savedKey;
+    const inputStyle = { flex: 1, padding: "9px 12px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" } as const;
     return (
       <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</label>
+        <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{label}</label>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-          {multi ? (
-            <textarea value={val} onChange={e => setVal(e.target.value)} rows={3} style={{ flex: 1, padding: "9px 12px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical" }} />
-          ) : (
-            <input value={val} onChange={e => setVal(e.target.value)} style={{ flex: 1, padding: "9px 12px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-          )}
-          <button onClick={() => saveField(k, val)} disabled={isSaving} style={{ padding: "9px 16px", background: isSaved ? C.sage : C.terra, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
-            {isSaving ? "..." : isSaved ? "✓ Saved" : "Save"}
+          {multi
+            ? <textarea value={val} onChange={e => setVal(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+            : <input value={val} onChange={e => setVal(e.target.value)} style={inputStyle} />}
+          <button onClick={() => saveFn(k, val)} disabled={isSaving} style={{ padding: "9px 16px", background: isSaved ? C.sage : C.terra, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
+            {isSaving ? "..." : isSaved ? "✓" : "Save"}
           </button>
         </div>
       </div>
@@ -705,18 +761,114 @@ function SiteEditor() {
   return (
     <div>
       <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: C.text, marginBottom: 24 }}>Site Editor</h2>
+
+      {/* Portrait / Hero Image */}
+      <Section title="Artist Portrait & Hero Image" desc="Appears in the hero section and about section of the homepage">
+        <input ref={portraitRef} type="file" accept="image/*" style={{ display: "none" }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handlePortraitUpload(f); e.target.value = ""; }} />
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+          {/* Preview */}
+          <div onClick={() => !uploading && portraitRef.current?.click()} style={{
+            width: 160, height: 200, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+            background: C.bg3, border: `2px dashed ${saved === "portrait" ? C.sage : C.border2}`,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            position: "relative",
+          }}>
+            {portraitPreview
+              ? <img src={portraitPreview} alt="Portrait" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <div style={{ textAlign: "center", padding: 12 }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>Click to upload portrait</div>
+                </div>}
+            {uploading && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(10,9,6,0.8)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <div style={{ width: 80, height: 4, background: C.bg3, borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${uploadProgress}%`, background: C.terra, transition: "width 0.3s" }} />
+                </div>
+                <div style={{ fontSize: 11, color: C.muted }}>{uploadProgress}%</div>
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
+              This photo appears as the main hero image on the homepage and in the About section. Best size: portrait orientation, at least 800×1000px.
+            </p>
+            <button onClick={() => portraitRef.current?.click()} disabled={uploading} style={{
+              padding: "10px 20px", background: C.terra, border: "none", borderRadius: 8,
+              color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+            }}>{uploading ? `Uploading ${uploadProgress}%...` : saved === "portrait" ? "✓ Uploaded!" : "Choose Photo"}</button>
+          </div>
+        </div>
+      </Section>
+
+      {/* Artist Info */}
+      <Section title="Artist Info" desc="Name, location, and contact details shown across the site">
+        <Field k="name"          label="Artist Name"     api="artist" />
+        <Field k="tagline"       label="Tagline"         api="artist" />
+        <Field k="studioLocation" label="Studio Location" api="artist" />
+        <Field k="phone"         label="Phone Number"    api="artist" />
+        <Field k="email"         label="Email Address"   api="artist" />
+        <Field k="quote"         label="Artist Quote"    api="artist" multi />
+      </Section>
+
+      {/* Social Links */}
+      <Section title="Social Links" desc="URLs for social media icons in the contact section">
+        {[
+          { platform: "TikTok", key: "tiktokUrl" },
+          { platform: "Instagram", key: "instagramUrl" },
+          { platform: "Saatchi Art", key: "saatchiUrl" },
+          { platform: "Facebook", key: "facebookUrl" },
+        ].map(({ platform, key }) => {
+          const currentLinks: any[] = artist.socialLinks || [];
+          const existing = currentLinks.find((s: any) => s.platform === platform);
+          const [val, setVal] = useState(existing?.url || "");
+          const isSaving = saving === key;
+          const isSaved  = saved  === key;
+          const save = async () => {
+            setSaving(key);
+            const updated = [...currentLinks.filter((s: any) => s.platform !== platform)];
+            if (val) updated.push({ platform, url: val, label: platform.slice(0, 2).toUpperCase() });
+            await fetch("/api/admin/artist", {
+              method: "PATCH", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ field: "socialLinks", value: updated }),
+            });
+            setArtist(a => ({ ...a, socialLinks: updated }));
+            setSaving(null); setSaved(key); setTimeout(() => setSaved(null), 2000);
+          };
+          return (
+            <div key={key} style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{platform} URL</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={val} onChange={e => setVal(e.target.value)} placeholder={`https://...`}
+                  style={{ flex: 1, padding: "9px 12px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 8, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                <button onClick={save} disabled={isSaving} style={{ padding: "9px 16px", background: isSaved ? C.sage : C.terra, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {isSaving ? "..." : isSaved ? "✓" : "Save"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </Section>
+
+      {/* Hero */}
       <Section title="Hero Section" desc="The main headline visitors see first">
-        <Field k="heroTitle" label="Hero Title" />
+        <Field k="heroTitle"    label="Hero Title"    />
         <Field k="heroSubtitle" label="Hero Subtitle" multi />
       </Section>
-      <Section title="Newsletter" desc="The email capture section at the bottom of the page">
-        <Field k="newsletterHeading" label="Newsletter Heading" />
-        <Field k="newsletterText" label="Newsletter Description" multi />
+
+      {/* Newsletter */}
+      <Section title="Newsletter" desc="Email capture section at the bottom of the page">
+        <Field k="newsletterHeading" label="Heading" />
+        <Field k="newsletterText"    label="Description" multi />
       </Section>
-      <Section title="Footer" desc="Copyright and footer text">
-        <Field k="footerText" label="Footer Copyright Text" />
+
+      {/* Footer */}
+      <Section title="Footer">
+        <Field k="footerText" label="Copyright Text" />
       </Section>
-      <Section title="Announcement Banner" desc="Optional banner shown at the top of the site">
+
+      {/* Announcement */}
+      <Section title="Announcement Banner" desc="Optional banner shown at the top of the site (leave blank to hide)">
         <Field k="announcementText" label="Banner Text" />
         <Field k="announcementLink" label="Banner Link URL" />
       </Section>
