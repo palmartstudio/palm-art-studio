@@ -155,16 +155,25 @@ body::after {
   .menu-toggle { display: flex; }
   .nav-links {
     position: fixed;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     flex-direction: column;
     justify-content: center;
-    gap: 32px;
-    background: var(--warm-white);
+    align-items: center;
+    gap: 28px;
+    background: rgba(250, 248, 244, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     transform: translateX(100%);
-    transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+    transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+    padding: 80px 24px 40px;
   }
   .nav-links.open { transform: translateX(0); }
-  .nav-links a { font-size: 1.1rem; }
+  .nav-links a { font-size: 1.25rem; letter-spacing: 0.1em; }
+  .nav-cta {
+    margin-top: 8px;
+    padding: 14px 40px !important;
+    font-size: 0.85rem !important;
+  }
 }
 
 /* â”€â”€â”€ HERO â”€â”€â”€ */
@@ -430,11 +439,19 @@ body::after {
 @media (max-width: 900px) {
   .hero-content {
     grid-template-columns: 1fr;
-    gap: 48px;
-    padding-top: 120px;
-    padding-bottom: 60px;
+    gap: 36px;
+    padding-top: 100px;
+    padding-bottom: 48px;
+    text-align: center;
   }
-  .hero-gallery { max-height: 400px; }
+  .hero-text { max-width: 100%; }
+  .hero-eyebrow { justify-content: center; }
+  .hero-actions { justify-content: center; }
+  .hero-gallery {
+    max-height: 340px;
+    width: 80%;
+    margin: 0 auto;
+  }
 }
 
 /* â”€â”€â”€ SECTION STYLES â”€â”€â”€ */
@@ -1476,4 +1493,90 @@ section {
   align-items: center;
   flex-wrap: wrap;
   margin-top: 40px;
+}
+
+
+/* ═══════════════════════════════════════════
+   MOBILE OPTIMIZATIONS
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Sections */
+  section { padding: 60px 20px; }
+  .section-header { margin-bottom: 40px; }
+  .section-title { font-size: clamp(1.8rem, 6vw, 2.4rem); }
+
+  /* Hero */
+  .hero-title { font-size: clamp(2.6rem, 10vw, 4rem); }
+  .hero-subtitle { font-size: 1rem; margin-bottom: 32px; }
+  .hero-actions { flex-direction: column; gap: 14px; width: 100%; }
+  .hero-actions .btn-primary { width: 100%; justify-content: center; padding: 16px 24px; }
+  .hero-actions .btn-secondary { align-self: center; }
+
+  /* Gallery */
+  .gallery-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .gallery-item:nth-child(2) { aspect-ratio: 3/4; }
+  .gallery-item:nth-child(4) { aspect-ratio: 3/4; }
+  .gallery-item:nth-child(5) { grid-column: span 1; aspect-ratio: 3/4; }
+  .gallery-item-overlay { opacity: 1; padding: 16px; }
+  .gallery-item-title { font-size: 1rem; }
+  .gallery-cta { margin-top: 32px; }
+
+  /* About */
+  .about-grid { grid-template-columns: 1fr; gap: 32px; }
+  .about-image { max-height: 320px; width: 75%; margin: 0 auto; }
+  .about-body h3 { font-size: clamp(1.6rem, 6vw, 2rem); }
+  .about-credentials { gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .credential { min-width: 80px; }
+
+  /* Commercial */
+  .commercial-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .commercial-card { padding: 20px 14px; }
+  .commercial-card-name { font-size: 1.05rem; }
+
+  /* Quote */
+  .quote-banner { padding: 60px 24px; }
+  .quote-text { font-size: clamp(1.1rem, 4vw, 1.6rem); }
+
+  /* Shop */
+  .shop-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .shop-card-body { padding: 14px; }
+  .shop-card-title { font-size: 1rem; }
+
+  /* Events */
+  .event-item {
+    grid-template-columns: 70px 1fr;
+    gap: 16px;
+    padding: 20px 0;
+  }
+  .event-action {
+    grid-column: 2;
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 0.65rem;
+  }
+  .event-day { font-size: 2rem; }
+
+  /* Newsletter */
+  .newsletter { padding: 60px 24px; }
+  .newsletter-form { flex-direction: column; gap: 10px; }
+  .newsletter-form input,
+  .newsletter-form button { width: 100%; }
+
+  /* Contact */
+  .contact-grid { grid-template-columns: 1fr; gap: 40px; }
+  .contact-form .btn-primary { width: 100%; justify-content: center; }
+
+  /* Footer */
+  .footer-inner { flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 16px; }
+}
+
+@media (max-width: 480px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .gallery-item:nth-child(5) { aspect-ratio: 4/3; }
+  .shop-grid { grid-template-columns: 1fr; }
+  .commercial-grid { grid-template-columns: 1fr; }
+  .about-image { width: 100%; max-height: 280px; }
+  .hero-gallery { width: 90%; max-height: 280px; }
 }
