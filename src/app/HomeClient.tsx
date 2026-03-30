@@ -13,9 +13,9 @@ interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?
 interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?:string; email?:string; quote?:string; portrait?:any; credentials?:{number:string;label:string}[]; commercialClients?:{name:string;description:string}[]; socialLinks?:{platform:string;url:string;label:string}[]; }
 
 interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
-interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; }
+interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; heroImages:(string|null)[]; }
 
-export default function HomeClient({ settings, artist, artwork, shopItems, events, portraitUrl, pageContent }:Props) {
+export default function HomeClient({ settings, artist, artwork, shopItems, events, portraitUrl, pageContent, heroImages }:Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -249,15 +249,19 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           </div>
           <div className="hero-gallery">
             <div className="hero-frame hero-frame-1 h-frame">
-              {portraitUrl
-                ? <img src={portraitUrl} alt={artistName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+              {(heroImages?.[0] || portraitUrl)
+                ? <img src={heroImages?.[0] || portraitUrl || ""} alt="Featured Artwork" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div className="hero-frame-inner"><span>Featured Artwork</span></div>}
             </div>
             <div className="hero-frame hero-frame-2 h-frame">
-              <div className="hero-frame-inner"><span>Recent Work</span></div>
+              {heroImages?.[1]
+                ? <img src={heroImages[1]} alt="Recent Work" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                : <div className="hero-frame-inner"><span>Recent Work</span></div>}
             </div>
             <div className="hero-frame hero-frame-3 h-frame">
-              <div className="hero-frame-inner"><span>Daily Study</span></div>
+              {heroImages?.[2]
+                ? <img src={heroImages[2]} alt="Daily Study" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                : <div className="hero-frame-inner"><span>Daily Study</span></div>}
             </div>
           </div>
         </div>

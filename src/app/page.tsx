@@ -28,7 +28,15 @@ async function getData() {
     } catch {}
   }
 
-  return { settings, artist, artwork, shopItems, events, portraitUrl, pageContent };
+  // Resolve hero frame images
+  const heroImages: (string | null)[] = [null, null, null];
+  ["heroImage1", "heroImage2", "heroImage3"].forEach((key, i) => {
+    if (settings?.[key]?.asset) {
+      try { heroImages[i] = builder.image(settings[key]).width(600).height(750).fit("crop").url(); } catch {}
+    }
+  });
+
+  return { settings, artist, artwork, shopItems, events, portraitUrl, pageContent, heroImages };
 }
 
 export default async function Home() {

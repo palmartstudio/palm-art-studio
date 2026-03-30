@@ -23,14 +23,17 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { field, value, assetRef } = body;
+    const { field, value, assetRef, imageAssetId } = body;
 
     // Check if document exists
     const existing = await client.fetch(`*[_type == "siteSettings"][0]{ _id }`);
 
     let patch: Record<string, unknown> = {};
 
-    if (assetRef && field) {
+    if (imageAssetId && field) {
+      // Image ref update (hero images, og image, etc.)
+      patch[field] = { _type: "image", asset: { _type: "reference", _ref: imageAssetId } };
+    } else if (assetRef && field) {
       // Video/asset ref update
       patch[field] = { _type: "file", asset: { _type: "reference", _ref: assetRef } };
     } else if (field && value !== undefined) {

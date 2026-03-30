@@ -415,6 +415,80 @@ function PageTab({ label, active, onClick }: { label: string; active: boolean; o
   );
 }
 
+// ─── Hero Frame Image Upload ───
+function HeroFrameUpload({ label, fieldName, preview, onUploaded }: {
+  label: string; fieldName: string; preview?: string; onUploaded: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [done, setDone] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(preview);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (preview) setPreviewUrl(preview); }, [preview]);
+
+  const handleFile = async (file: File) => {
+    setUploading(true); setProgress(0);
+    try {
+      const configRes = await fetch("/api/admin/upload-config");
+      const { token, dataset, apiVersion } = await configRes.json();
+      const assetData = await new Promise<{ _id: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
+        xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
+        xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText).document); } catch { reject(); } } else { reject(); } };
+        xhr.onerror = reject;
+        xhr.send(file);
+      });
+      await fetch("/api/admin/settings", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field: fieldName, imageAssetId: assetData._id }),
+      });
+      const reader = new FileReader();
+      reader.onload = e => { setPreviewUrl(e.target?.result as string); onUploaded(e.target?.result as string); };
+      reader.readAsDataURL(file);
+      setDone(true); setTimeout(() => setDone(false), 2500);
+    } catch { alert("Upload failed"); }
+    finally { setUploading(false); setProgress(0); }
+  };
+
+  return (
+    <div style={{ flex: "1 1 140px", minWidth: 140 }}>
+      <label style={{ fontSize: 10, color: C.muted, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</label>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+      <div onClick={() => !uploading && inputRef.current?.click()} style={{
+        width: "100%", aspectRatio: "3/4", borderRadius: 10, overflow: "hidden", cursor: "pointer",
+        background: C.bg3, border: `2px dashed ${done ? C.sage : C.border2}`,
+        display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+        transition: "border-color 0.2s",
+      }}>
+        {previewUrl ? (
+          <img src={previewUrl} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <div style={{ textAlign: "center", padding: 8 }}>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>🖼️</div>
+            <div style={{ fontSize: 10, color: C.dim }}>Click to upload</div>
+          </div>
+        )}
+        {uploading && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(10,9,6,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <div style={{ width: 60, height: 3, background: C.bg, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: C.terra, transition: "width 0.3s" }} />
+            </div>
+            <div style={{ fontSize: 10, color: C.muted }}>{progress}%</div>
+          </div>
+        )}
+        {done && !uploading && (
+          <div style={{ position: "absolute", top: 6, right: 6, background: C.sage, color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10 }}>✓</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Site Editor ───
 function SiteEditor() {
   const [activePage, setActivePage] = useState<EditorPage>("homepage");
@@ -437,6 +511,9 @@ function SiteEditor() {
     { value: 5, suffix: "", label: "States Exhibited" },
   ];
   const [localStats, setLocalStats] = useState<any[]>(defaultStats);
+  const [heroPreview1, setHeroPreview1] = useState<string | undefined>();
+  const [heroPreview2, setHeroPreview2] = useState<string | undefined>();
+  const [heroPreview3, setHeroPreview3] = useState<string | undefined>();
 
   // Local field state for all editable fields
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -535,9 +612,18 @@ function SiteEditor() {
       // Portrait preview
       if (a?.portrait?.asset?._ref) {
         fetch(`/api/admin/upload-config`).then(r => r.json()).then(({ dataset }) => {
-          setPortraitPreview(`https://cdn.sanity.io/images/mwzx64sx/${dataset}/${a.portrait.asset._ref.replace("image-","").replace(/-(\w+)$/,".$1")}`);
+          const refToUrl = (ref: string) => `https://cdn.sanity.io/images/mwzx64sx/${dataset}/${ref.replace("image-","").replace(/-(\w+)$/,".$1")}`;
+          setPortraitPreview(refToUrl(a.portrait.asset._ref));
         }).catch(() => {});
       }
+
+      // Hero image previews
+      fetch(`/api/admin/upload-config`).then(r => r.json()).then(({ dataset }) => {
+        const refToUrl = (ref: string) => `https://cdn.sanity.io/images/mwzx64sx/${dataset}/${ref.replace("image-","").replace(/-(\w+)$/,".$1")}`;
+        if (s?.heroImage1?.asset?._ref) setHeroPreview1(refToUrl(s.heroImage1.asset._ref));
+        if (s?.heroImage2?.asset?._ref) setHeroPreview2(refToUrl(s.heroImage2.asset._ref));
+        if (s?.heroImage3?.asset?._ref) setHeroPreview3(refToUrl(s.heroImage3.asset._ref));
+      }).catch(() => {});
     }).finally(() => setLoading(false));
   }, []);
 
@@ -683,6 +769,15 @@ function SiteEditor() {
             {SF("heroSubtitle", "Hero Subtitle", true)}
             {PF("homeHero", "ctaPrimary", "Primary Button Text")}
             {PF("homeHero", "ctaSecondary", "Secondary Button Text")}
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              <label style={{ fontSize: 11, color: C.muted, display: "block", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.07em" }}>Hero Frame Images</label>
+              <p style={{ fontSize: 12, color: C.dim, marginBottom: 14, marginTop: 0 }}>These three images appear in the hero section frames. Best size: portrait orientation, at least 600×750px.</p>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                <HeroFrameUpload label="Featured Artwork" fieldName="heroImage1" preview={heroPreview1} onUploaded={setHeroPreview1} />
+                <HeroFrameUpload label="Recent Work" fieldName="heroImage2" preview={heroPreview2} onUploaded={setHeroPreview2} />
+                <HeroFrameUpload label="Daily Study" fieldName="heroImage3" preview={heroPreview3} onUploaded={setHeroPreview3} />
+              </div>
+            </div>
           </EditorSection>
 
           <EditorSection title="Gallery Section" desc="Featured artwork showcase" icon="🎨">

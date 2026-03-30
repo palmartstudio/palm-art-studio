@@ -10,6 +10,9 @@ export default defineType({
     defineField({ name: "ogImage", title: "Default OG Image", type: "image" }),
     defineField({ name: "heroTitle", title: "Hero Title", type: "string", initialValue: "Art from the Soul" }),
     defineField({ name: "heroSubtitle", title: "Hero Subtitle", type: "text", rows: 2 }),
+    defineField({ name: "heroImage1", title: "Hero Frame 1 — Featured Artwork", type: "image", options: { hotspot: true } }),
+    defineField({ name: "heroImage2", title: "Hero Frame 2 — Recent Work", type: "image", options: { hotspot: true } }),
+    defineField({ name: "heroImage3", title: "Hero Frame 3 — Daily Study", type: "image", options: { hotspot: true } }),
     defineField({
       name: "announcement",
       title: "Announcement Banner",
