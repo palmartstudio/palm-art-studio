@@ -2,11 +2,13 @@ import { createClient } from "next-sanity";
 import imageUrlBuilder from "@sanity/image-url";
 import HomeClient from "./HomeClient";
 
+export const dynamic = "force-dynamic";
+
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "mwzx64sx",
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   apiVersion: "2024-01-01",
-  useCdn: true,
+  useCdn: false,
 });
 
 const builder = imageUrlBuilder(client);
