@@ -83,6 +83,11 @@ export default function GalleryPage() {
   const [filter, setFilter] = useState("All");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedArt, setSelectedArt] = useState<Artwork | null>(null);
+  const [pc, setPc] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetch("/api/admin/page-content").then(r => r.json()).then(d => setPc(d || {})).catch(() => {});
+  }, []);
 
   // ─── Fetch from Sanity via API ───
   const fetchArtworks = useCallback(async () => {
@@ -380,13 +385,13 @@ export default function GalleryPage() {
 
       {/* ═══ CTA BANNER ═══ */}
       <section style={{background:"#2A2520",padding:"clamp(60px,8vw,100px) clamp(24px,5vw,80px)",textAlign:"center",borderTop:"1px solid rgba(245,240,232,0.06)"}}>
-        <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(1.8rem,3vw,2.4rem)",fontWeight:400,color:"#F5F0E8",marginBottom:12}}>Interested in a piece?</h2>
+        <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(1.8rem,3vw,2.4rem)",fontWeight:400,color:"#F5F0E8",marginBottom:12}}>{pc.galleryPage?.ctaBannerHeading || "Interested in a piece?"}</h2>
         <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.1rem",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",marginBottom:36,maxWidth:500,margin:"0 auto 36px"}}>
-          Originals, prints, and custom commissions available. Every piece ships with a certificate of authenticity.
+          {pc.galleryPage?.ctaBannerDescription || "Originals, prints, and custom commissions available. Every piece ships with a certificate of authenticity."}
         </p>
         <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
-          <a href="/#contact" className="btn-primary" style={{background:"#C47D5A"}}>Commission a Piece</a>
-          <a href="/#shop" className="btn-secondary" style={{color:"#F5F0E8",borderColor:"#F5F0E8"}}>Browse the Shop</a>
+          <a href="/#contact" className="btn-primary" style={{background:"#C47D5A"}}>{pc.galleryPage?.ctaPrimary || "Commission a Piece"}</a>
+          <a href="/#shop" className="btn-secondary" style={{color:"#F5F0E8",borderColor:"#F5F0E8"}}>{pc.galleryPage?.ctaSecondary || "Browse the Shop"}</a>
         </div>
       </section>
 

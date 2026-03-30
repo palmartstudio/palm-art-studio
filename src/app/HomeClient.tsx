@@ -12,9 +12,10 @@ interface Event { _id:string; title:string; date:string; location?:string; rsvpU
 interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
 interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?:string; email?:string; quote?:string; portrait?:any; credentials?:{number:string;label:string}[]; commercialClients?:{name:string;description:string}[]; socialLinks?:{platform:string;url:string;label:string}[]; }
 
-interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; }
+interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
+interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; }
 
-export default function HomeClient({ settings, artist, artwork, shopItems, events, portraitUrl }:Props) {
+export default function HomeClient({ settings, artist, artwork, shopItems, events, portraitUrl, pageContent }:Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -25,6 +26,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
   const studioLocation = artist?.studioLocation || "Deltona, FL";
   const quote = artist?.quote || "It doesn't matter what others think—create for yourself. It is good for the soul and well-being. Feel the freedom!";
   const heroTitle = settings?.heroTitle || "Art from the Soul";
+  const pc = pageContent || {};
 
   // Nav scroll
   useEffect(() => {
@@ -241,8 +243,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             </h1>
             <p className="hero-subtitle h-sub">&ldquo;{quote}&rdquo;</p>
             <div className="hero-actions h-actions">
-              <a href="/gallery" className="btn-primary">Explore the Gallery</a>
-              <a href="#shop" className="btn-secondary">Shop Originals &amp; Prints</a>
+              <a href="/gallery" className="btn-primary">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
+              <a href="#shop" className="btn-secondary">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
             </div>
           </div>
           <div className="hero-gallery">
@@ -268,9 +270,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       {/* ═══ FEATURED GALLERY ═══ */}
       <section id="gallery">
         <div className="section-header g-header">
-          <div className="section-eyebrow">Featured Works</div>
-          <h2 className="section-title">The Collection</h2>
-          <p className="section-desc">From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul.</p>
+          <div className="section-eyebrow">{pc.homeGallery?.eyebrow || "Featured Works"}</div>
+          <h2 className="section-title">{pc.homeGallery?.title || "The Collection"}</h2>
+          <p className="section-desc">{pc.homeGallery?.description || "From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul."}</p>
         </div>
         <div className="gallery-grid">
           {displayArtwork.slice(0,6).map((item, i) => (
@@ -289,7 +291,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           ))}
         </div>
         <div className="gallery-cta">
-          <a href="/gallery" className="btn-primary">View Full Collection</a>
+          <a href="/gallery" className="btn-primary">{pc.homeGallery?.ctaText || "View Full Collection"}</a>
         </div>
       </section>
 
@@ -303,11 +305,11 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
               : <div className="about-image-placeholder">Artist Portrait</div>}
           </div>
           <div className="about-body">
-            <div className="section-eyebrow">The Artist</div>
-            <h3>From AOL &amp; Disney to <em>Fine Art</em></h3>
-            <p>Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey spans from the Maitland Center of the Arts and Rollins College to founding her own design firm, Storm Hill Studio.</p>
-            <p>Her commercial career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park. She went on to create original icon art for AOL's early user interface, design menus for Walt Disney World and Darden Restaurants, illustrate for the Wayne Taylor Indy Racing team, and create packaging for brands like Juice Bowl.</p>
-            <p>Now based in {studioLocation}, Carolyn continues to create works in acrylic and watercolor, with over fourteen years exhibiting in art festivals across Florida.</p>
+            <div className="section-eyebrow">{pc.homeAbout?.eyebrow || "The Artist"}</div>
+            <h3 dangerouslySetInnerHTML={{ __html: pc.homeAbout?.heading || "From AOL &amp; Disney to <em>Fine Art</em>" }} />
+            <p>{pc.homeAbout?.paragraph1 || "Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey spans from the Maitland Center of the Arts and Rollins College to founding her own design firm, Storm Hill Studio."}</p>
+            <p>{pc.homeAbout?.paragraph2 || "Her commercial career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park. She went on to create original icon art for AOL's early user interface, design menus for Walt Disney World and Darden Restaurants, illustrate for the Wayne Taylor Indy Racing team, and create packaging for brands like Juice Bowl."}</p>
+            <p>{(pc.homeAbout?.paragraph3 || "Now based in {studioLocation}, Carolyn continues to create works in acrylic and watercolor, with over fourteen years exhibiting in art festivals across Florida.").replace("{studioLocation}", studioLocation)}</p>
             <div className="about-credentials">
               {(artist?.credentials || [
                 { number: "40+", label: "Years Creating" },
@@ -327,9 +329,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       {/* ═══ COMMERCIAL ═══ */}
       <section id="commercial" style={{ background:"var(--warm-white)" }}>
         <div className="section-header reveal">
-          <div className="section-eyebrow">Commercial Work</div>
-          <h2 className="section-title">Design &amp; Illustration</h2>
-          <p className="section-desc">Decades of professional design work for iconic brands.</p>
+          <div className="section-eyebrow">{pc.homeCommercial?.eyebrow || "Commercial Work"}</div>
+          <h2 className="section-title">{pc.homeCommercial?.title || "Design & Illustration"}</h2>
+          <p className="section-desc">{pc.homeCommercial?.description || "Decades of professional design work for iconic brands."}</p>
         </div>
         <div className="commercial-grid">
           {(artist?.commercialClients || [
@@ -360,9 +362,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       {/* ═══ SHOP ═══ */}
       <section id="shop">
         <div className="section-header reveal">
-          <div className="section-eyebrow">Shop</div>
-          <h2 className="section-title">Bring Art Home</h2>
-          <p className="section-desc">Original paintings, limited edition prints, and commissions. Each piece ships with a certificate of authenticity.</p>
+          <div className="section-eyebrow">{pc.homeShop?.eyebrow || "Shop"}</div>
+          <h2 className="section-title">{pc.homeShop?.title || "Bring Art Home"}</h2>
+          <p className="section-desc">{pc.homeShop?.description || "Original paintings, limited edition prints, and commissions. Each piece ships with a certificate of authenticity."}</p>
         </div>
         <div className="shop-grid">
           {displayShop.map((item, i) => (
@@ -391,9 +393,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       {/* ═══ EVENTS ═══ */}
       <section id="community">
         <div className="section-header reveal">
-          <div className="section-eyebrow">Community</div>
-          <h2 className="section-title">Shows &amp; Events</h2>
-          <p className="section-desc">Join Carolyn at upcoming exhibitions, art festivals, and studio events.</p>
+          <div className="section-eyebrow">{pc.homeEvents?.eyebrow || "Community"}</div>
+          <h2 className="section-title">{pc.homeEvents?.title || "Shows & Events"}</h2>
+          <p className="section-desc">{pc.homeEvents?.description || "Join Carolyn at upcoming exhibitions, art festivals, and studio events."}</p>
         </div>
         <div className="events-list">
           {displayEvents.map((evt) => {
@@ -433,9 +435,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       {/* ═══ CONTACT ═══ */}
       <section id="contact">
         <div className="section-header reveal">
-          <div className="section-eyebrow">Get in Touch</div>
-          <h2 className="section-title">Let&apos;s Connect</h2>
-          <p className="section-desc">Interested in a commission, a purchase, or just want to talk art? Reach out anytime.</p>
+          <div className="section-eyebrow">{pc.homeContact?.eyebrow || "Get in Touch"}</div>
+          <h2 className="section-title">{pc.homeContact?.title || "Let's Connect"}</h2>
+          <p className="section-desc">{pc.homeContact?.description || "Interested in a commission, a purchase, or just want to talk art? Reach out anytime."}</p>
         </div>
         <div className="contact-grid">
           <div className="contact-info">

@@ -12,12 +12,13 @@ const client = createClient({
 const builder = imageUrlBuilder(client);
 
 async function getData() {
-  const [settings, artist, artwork, shopItems, events] = await Promise.all([
+  const [settings, artist, artwork, shopItems, events, pageContent] = await Promise.all([
     client.fetch(`*[_type == "siteSettings"][0]`).catch(() => null),
     client.fetch(`*[_type == "artistBio"][0]`).catch(() => null),
     client.fetch(`*[_type == "artwork"] | order(order asc)[0...6] { _id, title, medium, dimensions, price, status, "imageUrl": image.asset->url }`).catch(() => []),
     client.fetch(`*[_type == "shopItem"] | order(order asc)[0...4] { _id, title, medium, price, comparePrice, badge, "imageUrl": image.asset->url }`).catch(() => []),
     client.fetch(`*[_type == "event"] | order(date asc)[0...6] { _id, title, date, location, rsvpUrl }`).catch(() => []),
+    client.fetch(`*[_type == "pageContent"][0]`).catch(() => null),
   ]);
 
   let portraitUrl: string | null = null;
@@ -27,7 +28,7 @@ async function getData() {
     } catch {}
   }
 
-  return { settings, artist, artwork, shopItems, events, portraitUrl };
+  return { settings, artist, artwork, shopItems, events, portraitUrl, pageContent };
 }
 
 export default async function Home() {

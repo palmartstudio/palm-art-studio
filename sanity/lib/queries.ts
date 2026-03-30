@@ -7,6 +7,8 @@ export const artistBioQuery = groq`*[_type == "artistBio"][0]{
   "portraitUrl": portrait.asset->url
 }`;
 
+export const pageContentQuery = groq`*[_type == "pageContent"][0]`;
+
 export const featuredArtworkQuery = groq`*[_type == "artwork" && featured == true] | order(order asc){
   ...,
   "imageUrl": image.asset->url
