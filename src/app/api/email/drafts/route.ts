@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
-import { checkAdminAuth, logEmail } from "@/lib/email";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { checkAdminAuth, logEmail } from "../../../../lib/email";
 import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {

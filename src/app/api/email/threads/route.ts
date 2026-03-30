@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
-import { checkAdminAuth } from "@/lib/email";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { checkAdminAuth } from "../../../../lib/email";
 
 // GET: list threads by folder
 export async function GET(req: NextRequest) {
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (msg.has_attachments) t.has_attachments = true;
     if (msg.direction === "inbound") t.has_inbound = true;
   }
-  if (isInbox) { for (const [id, t] of tm) { if (!t.has_inbound) tm.delete(id); } }
+  if (isInbox) { Array.from(tm.entries()).forEach(([id, t]) => { if (!t.has_inbound) tm.delete(id); }); }
 
   // Contact name resolution
   const emails = [...new Set([...tm.values()].map((t: any) => t.to_email))];

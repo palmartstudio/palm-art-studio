@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
-import { checkAdminAuth } from "@/lib/email";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { checkAdminAuth } from "../../../../lib/email";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

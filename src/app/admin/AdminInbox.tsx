@@ -73,8 +73,11 @@ export default function AdminInbox() {
   const editor=useEditor({extensions:[StarterKit,Link.configure({openOnClick:false}),Underline,Placeholder.configure({placeholder:"Write your message..."})],content:""});
 
   // Data fetching
+  const syncImap=useCallback(async()=>{await fetch("/api/email/sync",{method:"POST"}).catch(()=>null);},[]);
   const loadThreads=useCallback(async()=>{setLoading(true);const r=await fetch(`/api/email/threads?folder=${folder}`).catch(()=>null);if(r?.ok){const d=await r.json();setThreads(d.threads||[]);setFc(d.folderCounts||{});}setLoading(false);},[folder]);
-  useEffect(()=>{loadThreads();},[loadThreads]);
+  useEffect(()=>{syncImap().then(()=>loadThreads());},[syncImap,loadThreads]);
+  // Poll every 30s
+  useEffect(()=>{const iv=setInterval(()=>{syncImap().then(()=>loadThreads());},30000);return()=>clearInterval(iv);},[syncImap,loadThreads]);
   useEffect(()=>{if(messages.length)setTimeout(()=>msgEnd.current?.scrollIntoView({behavior:"smooth"}),100);},[messages]);
 
   const openThread=async(t:Thread)=>{setSel(t);setView("thread");const r=await fetch("/api/email/threads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:t.thread_id})});if(r?.ok){const d=await r.json();setMessages(d.messages||[]);}setThreads(p=>p.map(x=>x.thread_id===t.thread_id?{...x,unread_count:0}:x));};
