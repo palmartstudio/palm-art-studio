@@ -428,6 +428,15 @@ function SiteEditor() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const portraitRef = useRef<HTMLInputElement>(null);
+  const [statSaving, setStatSaving] = useState(false);
+  const [statSaved, setStatSaved] = useState(false);
+  const defaultStats = [
+    { value: 40, suffix: "+", label: "Years Creating Art" },
+    { value: 14, suffix: "+", label: "Years Exhibiting" },
+    { value: 8, suffix: "", label: "Major Clients" },
+    { value: 5, suffix: "", label: "States Exhibited" },
+  ];
+  const [localStats, setLocalStats] = useState<any[]>(defaultStats);
 
   // Local field state for all editable fields
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -443,8 +452,64 @@ function SiteEditor() {
       setPageContent(pc || {});
       setSettings(s || {});
       setArtist(a || {});
-      // Flatten nested pageContent into field state
-      const flat: Record<string, string> = {};
+
+      // Default values for all page content fields (shown when Sanity document is empty)
+      const fieldDefaults: Record<string, string> = {
+        "homeHero.ctaPrimary": "Explore the Gallery", "homeHero.ctaSecondary": "Shop Originals & Prints",
+        "homeGallery.eyebrow": "Featured Works", "homeGallery.title": "The Collection",
+        "homeGallery.description": "From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul.",
+        "homeGallery.ctaText": "View Full Collection",
+        "homeAbout.eyebrow": "The Artist", "homeAbout.heading": "From AOL & Disney to Fine Art",
+        "homeAbout.paragraph1": "Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey spans from the Maitland Center of the Arts and Rollins College to founding her own design firm, Storm Hill Studio.",
+        "homeAbout.paragraph2": "Her commercial career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park. She went on to create original icon art for AOL's early user interface, design menus for Walt Disney World and Darden Restaurants, illustrate for the Wayne Taylor Indy Racing team, and create packaging for brands like Juice Bowl.",
+        "homeAbout.paragraph3": "Now based in {studioLocation}, Carolyn continues to create works in acrylic and watercolor, with over fourteen years exhibiting in art festivals across Florida.",
+        "homeCommercial.eyebrow": "Commercial Work", "homeCommercial.title": "Design & Illustration",
+        "homeCommercial.description": "Decades of professional design work for iconic brands.",
+        "homeShop.eyebrow": "Shop", "homeShop.title": "Bring Art Home",
+        "homeShop.description": "Original paintings, limited edition prints, and commissions. Each piece ships with a certificate of authenticity.",
+        "homeEvents.eyebrow": "Community", "homeEvents.title": "Shows & Events",
+        "homeEvents.description": "Join Carolyn at upcoming exhibitions, art festivals, and studio events.",
+        "homeContact.eyebrow": "Get in Touch", "homeContact.title": "Let's Connect",
+        "homeContact.description": "Interested in a commission, a purchase, or just want to talk art? Reach out anytime.",
+        "aboutHero.eyebrow": "Artist & Designer",
+        "aboutHero.subtitle": "From the pre-digital art studios of Winter Park to AOL, Disney World, and award-winning fine art exhibitions across America.",
+        "aboutOrigin.eyebrow": "The Beginning", "aboutOrigin.heading": "Born to Create",
+        "aboutOrigin.paragraph1": "Born in Towson, Maryland, and raised in Winter Park, Florida, I have been painting and creating since childhood. My artistic journey has taken me from the Maitland Center of the Arts and Rollins College to establishing my own design firm, Storm Hill Studio.",
+        "aboutOrigin.paragraph2": "Now based in Deltona, I continue to create works in acrylic and watercolor, drawing inspiration from a lifetime of artistic exploration.",
+        "aboutSacrifice.heading": "The Sacrifice",
+        "aboutSacrifice.paragraph1": "In 1972, I was accepted into the prestigious Ringling School of Art. However, faced with a family emergency, I chose to redirect my college funds to pay for my Godmother's life-saving open-heart surgery.",
+        "aboutSacrifice.highlight": "That decision blessed me with her presence for another twenty years.",
+        "aboutSacrifice.closing": "Today, I create with a sense of gratitude and freedom, aiming to learn without judgment and share the joy of art with others.",
+        "aboutCareer.eyebrow": "Commercial Design & Illustration", "aboutCareer.heading": "The Professional Journey",
+        "aboutCareer.description": "My career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park, specializing in hand-drawn designs for packaging, logos, and brochures.",
+        "aboutExhibitions.eyebrow": "Fine Art & Exhibitions", "aboutExhibitions.heading": "Returning to the Canvas",
+        "aboutExhibitions.paragraph1": "In addition to commercial work, I have spent over fourteen years exhibiting in art festivals across Florida, earning multiple awards for my watercolor paintings — including 1st, 2nd, 3rd place and Honorable Mentions for detailed watercolors of old buildings and Victorian-era houses.",
+        "aboutExhibitions.paragraph2": "I entered a show in Orlando benefiting Harbor House, a haven for domestic abuse survivors. Out of 4,000 entries, only three hundred were chosen. My work was among them.",
+        "aboutExhibitions.paragraph3": "My work has been featured in gallery exhibits including City Arts Orlando. I am currently an active member of the West Volusia Artists.",
+        "aboutQuote.text": "What I tell anyone who wants to create is simple: Do it. It doesn't matter what others think — create for yourself. It is good for the soul and well-being. Feel the freedom!",
+        "aboutQuote.attribution": "Carolyn Jenkins",
+        "aboutPersonalNote.eyebrow": "A Personal Note", "aboutPersonalNote.heading": "Gratitude & Freedom",
+        "aboutPersonalNote.paragraph1": "My path as an artist has been defined by both passion and sacrifice. The decision to forgo Ringling in 1972 shaped everything that followed — it taught me that art is not just what you put on canvas, but the choices you make with your life.",
+        "aboutPersonalNote.paragraph2": "I am not inspired by any single artist. I feel if I was, I would just be considered a copier. I proceed because it's my way naturally — to project my emotions, my method of communication, my heart and soul.",
+        "aboutPersonalNote.paragraph3": "I love to utilize recycled pieces in some of my paintings and explore as far as I can with my work. Every day I paint, I exceed my own limitations and imagination.",
+        "aboutPersonalNote.ctaPrimary": "View My Work", "aboutPersonalNote.ctaSecondary": "Get in Touch",
+        "galleryPage.heading": "The Gallery", "galleryPage.subtitle": "Original paintings, watercolors, and mixed-media works",
+        "galleryPage.ctaBannerHeading": "Interested in a piece?",
+        "galleryPage.ctaBannerDescription": "Originals, prints, and custom commissions available. Every piece ships with a certificate of authenticity.",
+        "galleryPage.ctaPrimary": "Commission a Piece", "galleryPage.ctaSecondary": "Browse the Shop",
+        "settings.heroTitle": "Art from the Soul", "settings.heroSubtitle": "",
+        "settings.newsletterHeading": "Stay in the Studio",
+        "settings.newsletterText": "New works, behind-the-scenes stories, and exhibition announcements — delivered to your inbox.",
+        "settings.footerText": "© 2026 Palm Art Studio — Carolyn Jenkins. All rights reserved.",
+        "settings.siteTitle": "Palm Art Studio", "settings.siteDescription": "",
+        "settings.announcementText": "", "settings.announcementLink": "",
+        "artist.name": "Carolyn Jenkins", "artist.tagline": "Artist & Designer",
+        "artist.studioLocation": "Deltona, FL", "artist.phone": "(352) 217-9709",
+        "artist.email": "cj@palmartstudio.com", "artist.quote": "It doesn't matter what others think—create for yourself. It is good for the soul and well-being. Feel the freedom!",
+      };
+
+      // Start with defaults, then overlay with actual Sanity data
+      const flat: Record<string, string> = { ...fieldDefaults };
       for (const [section, obj] of Object.entries(pc || {})) {
         if (obj && typeof obj === "object" && !Array.isArray(obj) && section !== "_id" && section !== "_type" && section !== "_rev" && section !== "_createdAt" && section !== "_updatedAt") {
           for (const [key, val] of Object.entries(obj as Record<string, any>)) {
@@ -452,15 +517,20 @@ function SiteEditor() {
           }
         }
       }
-      // Flatten settings
+      // Flatten settings (overlay on defaults)
       for (const [key, val] of Object.entries(s || {})) {
         if (typeof val === "string") flat[`settings.${key}`] = val;
       }
-      // Flatten artist
+      // Flatten artist (overlay on defaults)
       for (const [key, val] of Object.entries(a || {})) {
         if (typeof val === "string") flat[`artist.${key}`] = val;
       }
       setFields(flat);
+
+      // Load stats from Sanity or use defaults
+      if (pc?.aboutStats && Array.isArray(pc.aboutStats) && pc.aboutStats.length > 0) {
+        setLocalStats(pc.aboutStats.map((s: any) => ({ ...s })));
+      }
 
       // Portrait preview
       if (a?.portrait?.asset?._ref) {
@@ -686,53 +756,38 @@ function SiteEditor() {
 
           <EditorSection title="Stats" desc="Numbers that count up on scroll" icon="📊">
             <p style={{ color: C.dim, fontSize: 12, marginTop: 14, marginBottom: 8 }}>Edit the 4 stats shown in the green banner. Changes save to Sanity as a group.</p>
-            {(() => {
-              const defaults = [
-                { value: 40, suffix: "+", label: "Years Creating Art" },
-                { value: 14, suffix: "+", label: "Years Exhibiting" },
-                { value: 8, suffix: "", label: "Major Clients" },
-                { value: 5, suffix: "", label: "States Exhibited" },
-              ];
-              const stats = pageContent?.aboutStats || defaults;
-              const [localStats, setLocalStats] = useState(stats.map((s: any) => ({ ...s })));
-              const [statSaving, setStatSaving] = useState(false);
-              const [statSaved, setStatSaved] = useState(false);
-              const saveStats = async () => {
+            <div>
+              {localStats.map((s: any, i: number) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 60px 1fr", gap: 10, alignItems: "end", marginBottom: 10, marginTop: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>NUMBER</label>
+                    <input type="number" value={s.value || 0} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], value: parseInt(e.target.value) || 0 }; setLocalStats(v); }}
+                      style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>SUFFIX</label>
+                    <input value={s.suffix || ""} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], suffix: e.target.value }; setLocalStats(v); }}
+                      style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} placeholder="+" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>LABEL</label>
+                    <input value={s.label || ""} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], label: e.target.value }; setLocalStats(v); }}
+                      style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                </div>
+              ))}
+              <button onClick={async () => {
                 setStatSaving(true);
                 await fetch("/api/admin/page-content", {
                   method: "PATCH", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ section: "aboutStats", field: "_full", value: localStats }),
                 });
                 setStatSaving(false); setStatSaved(true); setTimeout(() => setStatSaved(false), 2000);
-              };
-              return (
-                <div>
-                  {localStats.map((s: any, i: number) => (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 60px 1fr", gap: 10, alignItems: "end", marginBottom: 10, marginTop: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>NUMBER</label>
-                        <input type="number" value={s.value || 0} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], value: parseInt(e.target.value) || 0 }; setLocalStats(v); }}
-                          style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>SUFFIX</label>
-                        <input value={s.suffix || ""} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], suffix: e.target.value }; setLocalStats(v); }}
-                          style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} placeholder="+" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 4 }}>LABEL</label>
-                        <input value={s.label || ""} onChange={e => { const v = [...localStats]; v[i] = { ...v[i], label: e.target.value }; setLocalStats(v); }}
-                          style={{ width: "100%", padding: "8px 10px", background: C.bg3, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={saveStats} disabled={statSaving} style={{
-                    marginTop: 10, padding: "9px 20px", background: statSaved ? C.sage : C.terra, border: "none",
-                    borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
-                  }}>{statSaving ? "Saving..." : statSaved ? "✓ Saved!" : "Save All Stats"}</button>
-                </div>
-              );
-            })()}
+              }} disabled={statSaving} style={{
+                marginTop: 10, padding: "9px 20px", background: statSaved ? C.sage : C.terra, border: "none",
+                borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+              }}>{statSaving ? "Saving..." : statSaved ? "✓ Saved!" : "Save All Stats"}</button>
+            </div>
           </EditorSection>
 
           <EditorSection title="Fine Art & Exhibitions" desc="Exhibition history and awards" icon="🏛️">
