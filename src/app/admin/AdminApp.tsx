@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+const AdminInbox = dynamic(() => import("./AdminInbox"), { ssr: false, loading: () => <div style={{ color: "#8B7F72", padding: 60, textAlign: "center" }}>Loading email client...</div> });
 
 // ─── Tab types ───
-type Tab = "dashboard" | "gallery" | "shop" | "events" | "site-editor" | "settings";
+type Tab = "dashboard" | "gallery" | "shop" | "events" | "email" | "site-editor" | "settings";
 type EditorPage = "homepage" | "about" | "gallery" | "global";
 
 // ─── Types ───
@@ -1120,6 +1122,9 @@ export default function AdminApp() {
       { icon: "🛒", label: "Shop", tab: "shop" as Tab },
       { icon: "📅", label: "Events", tab: "events" as Tab },
     ]},
+    { label: "Communication", items: [
+      { icon: "✉️", label: "Email", tab: "email" as Tab },
+    ]},
     { label: "Site", items: [
       { icon: "🌐", label: "Site Editor", tab: "site-editor" as Tab },
     ]},
@@ -1134,6 +1139,7 @@ export default function AdminApp() {
       case "gallery": return <GalleryManager />;
       case "shop": return <ShopManager />;
       case "events": return <EventsManager />;
+      case "email": return <AdminInbox />;
       case "site-editor": return <SiteEditor />;
       case "settings": return (
         <div>
