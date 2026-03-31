@@ -132,7 +132,7 @@ export default function GalleryPage() {
 
   // ─── Hero + filter bar entrance ───
   useEffect(() => {
-    if (loading) return;
+    if (loading || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
     tl.from(".gh-line",    { y: 80, opacity: 0, stagger: 0.1, duration: 1, delay: 0.1 })
       .from(".gh-sub",     { y: 20, opacity: 0, duration: 0.7 }, "-=0.5")
@@ -144,6 +144,8 @@ export default function GalleryPage() {
   useEffect(() => {
     if (loading) return;
     const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
+
       ScrollTrigger.create({
         trigger: ".masonry-grid",
         start: "top 90%",
@@ -155,6 +157,34 @@ export default function GalleryPage() {
           });
         },
         once: true,
+      });
+
+      mm.add("(max-width: 900px)", () => {
+        gsap.to(".gh-line", {
+          yPercent: -12,
+          ease: "none",
+          scrollTrigger: { trigger: "section:first-of-type", start: "top top", end: "bottom top", scrub: 1 },
+        });
+
+        gsap.utils.toArray<HTMLElement>(".art-card").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            {
+              y: 48,
+              opacity: 0,
+              scale: 0.95,
+            },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.75,
+              ease: "power3.out",
+              delay: index * 0.015,
+              scrollTrigger: { trigger: el, start: "top 92%", once: true },
+            }
+          );
+        });
       });
     }, mainRef);
     return () => ctx.revert();
@@ -178,6 +208,8 @@ export default function GalleryPage() {
       }}>
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,125,90,0.12),transparent 70%)",top:"-15%",right:"-10%",animation:"floatSlow 20s ease-in-out infinite"}} />
         <div style={{position:"absolute",width:350,height:350,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,154,126,0.1),transparent 70%)",bottom:"-10%",left:"-5%",animation:"floatSlow 20s ease-in-out infinite",animationDelay:"-8s"}} />
+        <div style={{position:"absolute",width:"62vw",height:"62vw",maxWidth:560,maxHeight:560,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,255,255,0.12),transparent 68%)",top:"-20%",right:"8%",filter:"blur(24px)",pointerEvents:"none"}} />
+        <div style={{position:"absolute",width:"50vw",height:"50vw",maxWidth:420,maxHeight:420,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,125,90,0.18),transparent 70%)",bottom:"-12%",left:"-6%",filter:"blur(34px)",pointerEvents:"none"}} />
 
         <div style={{maxWidth:1400,margin:"0 auto",width:"100%",position:"relative",zIndex:1}}>
           <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
