@@ -204,13 +204,13 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
         const intro = gsap.timeline({ defaults: { ease: "power4.out" } });
         intro
-          .from(".hero-bg-element", { scale: 0.72, opacity: 0, stagger: 0.12, duration: 1.3 }, 0)
-          .from(".h-eyebrow", { yPercent: 120, opacity: 0, duration: 0.9 }, 0.12)
-          .from(".h-title-1, .h-title-2", { yPercent: 115, opacity: 0, stagger: 0.08, duration: 1.05 }, 0.18)
-          .from(".h-sub", { y: 32, opacity: 0, filter: "blur(10px)", duration: 0.9 }, 0.42)
-          .from(".h-actions > *", { y: 24, opacity: 0, stagger: 0.1, duration: 0.7 }, 0.58)
-          .from(".h-frame", { y: 80, opacity: 0, rotateX: 10, stagger: 0.1, duration: 1.1 }, 0.24)
-          .from(".h-scroll-hint", { opacity: 0, y: -12, duration: 0.6 }, 0.95);
+          .fromTo(".hero-bg-element", { scale: 0.72, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.12, duration: 1.3 }, 0)
+          .fromTo(".h-eyebrow", { yPercent: 120, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.9 }, 0.12)
+          .fromTo(".h-title-1, .h-title-2", { yPercent: 115, opacity: 0 }, { yPercent: 0, opacity: 1, stagger: 0.08, duration: 1.05 }, 0.18)
+          .fromTo(".h-sub", { y: 32, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.42)
+          .fromTo(".h-actions > *", { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.7 }, 0.58)
+          .fromTo(".h-frame", { y: 80, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 1.1 }, 0.24)
+          .fromTo(".h-scroll-hint", { opacity: 0, y: -12 }, { opacity: 0.5, y: 0, duration: 0.6 }, 0.95);
 
         gsap.to(".hero-text", {
           yPercent: -10,
@@ -409,13 +409,13 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         // ── Hero Intro: Dramatic staggered reveal ──
         const hero = gsap.timeline({ defaults: { ease: "power3.out" } });
         hero
-          .from(".hero-bg-element", { scale: 0.6, opacity: 0, stagger: 0.15, duration: 1.4 }, 0)
-          .from(".h-eyebrow", { y: 40, opacity: 0, duration: 0.8 }, 0.2)
-          .from(".h-title-1", { y: 60, opacity: 0, duration: 1.0 }, 0.3)
-          .from(".h-title-2", { y: 60, opacity: 0, duration: 1.0 }, 0.45)
-          .from(".h-sub", { y: 30, opacity: 0, duration: 0.8 }, 0.7)
-          .from(".h-actions > *", { y: 40, opacity: 0, scale: 0.9, stagger: 0.12, duration: 0.8 }, 0.85)
-          .from(".h-frame", { y: 80, opacity: 0, scale: 0.85, duration: 1.2, ease: "power4.out" }, 0.4);
+          .fromTo(".hero-bg-element", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.15, duration: 1.4 }, 0)
+          .fromTo(".h-eyebrow", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 0.2)
+          .fromTo(".h-title-1", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0 }, 0.3)
+          .fromTo(".h-title-2", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0 }, 0.45)
+          .fromTo(".h-sub", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 0.7)
+          .fromTo(".h-actions > *", { y: 40, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, stagger: 0.12, duration: 0.8 }, 0.85)
+          .fromTo(".h-frame", { y: 80, opacity: 0, scale: 0.85 }, { y: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power4.out" }, 0.4);
 
         // Hero parallax — subtle depth on scroll
         gsap.to(".hero-bg-1", {
@@ -883,6 +883,10 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
       <style>{`
         @keyframes scrollPulse { 0%,100%{opacity:.4;transform:scaleY(1)} 50%{opacity:1;transform:scaleY(1.15)} }
+        @keyframes heroSafety { to { opacity: 1 !important; transform: none !important; } }
+        .h-eyebrow, .h-title-1, .h-title-2, .h-sub, .h-actions > *, .h-frame {
+          animation: heroSafety 0.01s 2.5s forwards;
+        }
         @media(max-width:900px){
           .h-scroll-hint{display:none}
           .hero-frame-2,.hero-frame-3{display:none}
