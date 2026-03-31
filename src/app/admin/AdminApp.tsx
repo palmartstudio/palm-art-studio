@@ -1099,7 +1099,10 @@ export default function AdminApp() {
   // ── History-aware tab navigation (Android back button) ──
   const setActiveTab = (tab: Tab) => { if (tab !== "dashboard") { window.history.pushState({ adminTab: tab }, ""); } setActiveTabRaw(tab); };
   useEffect(() => {
-    const onPop = () => { if (activeTab !== "dashboard") { setActiveTabRaw("dashboard"); } };
+    const onPop = () => {
+      // Only handle back if NOT on email tab (email handles its own back flow)
+      if (activeTab !== "dashboard" && activeTab !== "email") { setActiveTabRaw("dashboard"); }
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [activeTab]);
