@@ -11,8 +11,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Palm Art Studio | Carolyn Jenkins — Artist & Designer",
-  description: "Award-winning fine art by Carolyn Jenkins. From Disney World design to gallery exhibitions. Original paintings, prints, and commissions.",
+  title: "Palm Art Studio | Carolyn Jenkins — Paintings, Prints, and Commissions",
+  description: "Original paintings, prints, and commissions by Carolyn Jenkins, a Florida artist working in watercolor, acrylic, and mixed media.",
   manifest: "/manifest.json",
   icons: {
     icon: [

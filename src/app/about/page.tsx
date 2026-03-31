@@ -18,9 +18,55 @@ const clients = [
   { name: "Coach Transit Components", work: "Product catalogs", era: "Industrial" },
 ];
 
+function preferUpdatedCopy(value: string | undefined, legacy: string, updated: string) {
+  if (!value || value === legacy) return updated;
+  return value;
+}
+
 export default function AboutPage() {
   const mainRef = useRef<HTMLDivElement>(null);
   const [pc, setPc] = useState<Record<string, any>>({});
+  const aboutHeroSubtitle = preferUpdatedCopy(
+    pc.aboutHero?.subtitle,
+    "From the pre-digital art studios of Winter Park to AOL, Disney World, and award-winning fine art exhibitions across America.",
+    "From hand-drawn commercial studios to a lifetime of watercolor, acrylic, and mixed-media work in Florida."
+  );
+  const aboutOriginHeading = preferUpdatedCopy(pc.aboutOrigin?.heading, "Born to Create", "A Life in Art");
+  const aboutOriginParagraph1 = preferUpdatedCopy(
+    pc.aboutOrigin?.paragraph1,
+    "Born in Towson, Maryland, and raised in Winter Park, Florida, I have been painting and creating since childhood. My artistic journey has taken me from the Maitland Center of the Arts and Rollins College to establishing my own design firm, Storm Hill Studio.",
+    "Born in Towson, Maryland, and raised in Winter Park, Florida, I have been painting and creating since childhood. My artistic journey has taken me from the Maitland Art Center and Rollins College to establishing my own design firm, Storm Hill Studio."
+  );
+  const aboutOriginParagraph2 = preferUpdatedCopy(
+    pc.aboutOrigin?.paragraph2,
+    "Now based in Deltona, I continue to create works in acrylic and watercolor, drawing inspiration from a lifetime of artistic exploration.",
+    "Now based in Deltona, I continue to create works in acrylic and watercolor shaped by a lifetime of looking closely, working steadily, and following where the work leads."
+  );
+  const aboutSacrificeClosing = preferUpdatedCopy(
+    pc.aboutSacrifice?.closing,
+    "Today, I create with a sense of gratitude and freedom, aiming to learn without judgment and share the joy of art with others.",
+    "Today, I create with gratitude, curiosity, and a commitment to learning without judgment."
+  );
+  const aboutExhibitionsParagraph1 = preferUpdatedCopy(
+    pc.aboutExhibitions?.paragraph1,
+    "In addition to commercial work, I have spent over fourteen years exhibiting in art festivals across Florida, earning multiple awards for my watercolor paintings — including 1st, 2nd, 3rd place and Honorable Mentions for detailed watercolors of old buildings and Victorian-era houses.",
+    "In addition to commercial work, I have spent over fourteen years exhibiting in art festivals across Florida, with watercolor paintings that have received festival recognition and gallery placement."
+  );
+  const aboutQuoteText = preferUpdatedCopy(
+    pc.aboutQuote?.text,
+    "What I tell anyone who wants to create is simple: Do it. It doesn’t matter what others think — create for yourself. It is good for the soul and well-being. Feel the freedom!",
+    "What I tell anyone who wants to create is simple: Do it. Create for yourself, keep learning, and keep going."
+  );
+  const personalNoteParagraph2 = preferUpdatedCopy(
+    pc.aboutPersonalNote?.paragraph2,
+    "I am not inspired by any single artist. I feel if I was, I would just be considered a copier. I proceed because it’s my way naturally — to project my emotions, my method of communication, my heart and soul.",
+    "I am not inspired by any single artist. The work has to come from your own hand, your own eye, and your own way of seeing."
+  );
+  const personalNoteParagraph3 = preferUpdatedCopy(
+    pc.aboutPersonalNote?.paragraph3,
+    "I love to utilize recycled pieces in some of my paintings and explore as far as I can with my work. Every day I paint, I exceed my own limitations and imagination.",
+    "I love incorporating recycled materials into some of my paintings and pushing each piece a little further. Every day in the studio is a chance to learn, refine, and see something new."
+  );
 
   useEffect(() => {
     fetch("/api/admin/page-content").then(r => r.json()).then(d => setPc(d || {})).catch(() => {});
@@ -116,7 +162,7 @@ export default function AboutPage() {
           <h1 className="ah-line" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(3.5rem,8vw,7rem)",fontWeight:300,fontStyle:"italic",lineHeight:1,color:"#C47D5A",margin:"0 0 28px"}}>Jenkins</h1>
         </div>
         <p className="ah-sub" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1.1rem,2vw,1.4rem)",fontWeight:300,fontStyle:"italic",color:"#3D3530",opacity:0.7,maxWidth:500,lineHeight:1.7,margin:"0 auto 48px"}}>
-          {pc.aboutHero?.subtitle || "From the pre-digital art studios of Winter Park to AOL, Disney World, and award-winning fine art exhibitions across America."}
+          {aboutHeroSubtitle}
         </p>
         <div className="ah-scroll" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,color:"#B8AFA3",fontSize:"0.7rem",letterSpacing:"0.15em",textTransform:"uppercase",fontFamily:"'Outfit',sans-serif"}}>
           Scroll to explore
@@ -142,9 +188,9 @@ export default function AboutPage() {
           <div>
             <div className="reveal-up" style={{marginBottom:48}}>
               <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C47D5A",marginBottom:16}}>{pc.aboutOrigin?.eyebrow || "The Beginning"}</div>
-              <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(2rem,3.5vw,2.8rem)",fontWeight:400,color:"#2A2520",lineHeight:1.15,marginBottom:24}}>{pc.aboutOrigin?.heading || "Born to Create"}</h2>
-              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{pc.aboutOrigin?.paragraph1 || "Born in Towson, Maryland, and raised in Winter Park, Florida, I have been painting and creating since childhood. My artistic journey has taken me from the Maitland Center of the Arts and Rollins College to establishing my own design firm, Storm Hill Studio."}</p>
-              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{pc.aboutOrigin?.paragraph2 || "Now based in Deltona, I continue to create works in acrylic and watercolor, drawing inspiration from a lifetime of artistic exploration."}</p>
+              <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(2rem,3.5vw,2.8rem)",fontWeight:400,color:"#2A2520",lineHeight:1.15,marginBottom:24}}>{aboutOriginHeading}</h2>
+              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{aboutOriginParagraph1}</p>
+              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{aboutOriginParagraph2}</p>
             </div>
 
             {/* Ringling story — emotional highlight */}
@@ -155,7 +201,7 @@ export default function AboutPage() {
             </div>
 
             <div className="reveal-up" style={{marginBottom:0}}>
-              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530"}}>{pc.aboutSacrifice?.closing || "Today, I create with a sense of gratitude and freedom, aiming to learn without judgment and share the joy of art with others."}</p>
+              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530"}}>{aboutSacrificeClosing}</p>
             </div>
           </div>
         </div>
@@ -224,7 +270,7 @@ export default function AboutPage() {
           <div className="reveal-up" style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:32,marginBottom:40}}>
             <div style={{background:"linear-gradient(to bottom, #C47D5A, #C4A86E)",borderRadius:2}} />
             <div>
-              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{pc.aboutExhibitions?.paragraph1 || "In addition to commercial work, I have spent over fourteen years exhibiting in art festivals across Florida, earning multiple awards for my watercolor paintings \u2014 including 1st, 2nd, 3rd place and Honorable Mentions for detailed watercolors of old buildings and Victorian-era houses."}</p>
+              <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{aboutExhibitionsParagraph1}</p>
               <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:20}}>{pc.aboutExhibitions?.paragraph2 || "I entered a show in Orlando benefiting Harbor House, a haven for domestic abuse survivors. Out of 4,000 entries, only three hundred were chosen. My work was among them."}</p>
               <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530"}}>{pc.aboutExhibitions?.paragraph3 || "My work has been featured in gallery exhibits including City Arts Orlando. I am currently an active member of the West Volusia Artists."}</p>
             </div>
@@ -239,7 +285,7 @@ export default function AboutPage() {
       }}>
         <div style={{position:"absolute",top:-40,left:"50%",transform:"translateX(-50%)",fontFamily:"'Cormorant Garamond',serif",fontSize:"20rem",color:"rgba(255,255,255,0.04)",lineHeight:1}}>&ldquo;</div>
         <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1.5rem,3.5vw,2.4rem)",fontWeight:300,fontStyle:"italic",lineHeight:1.6,color:"#F5F0E8",maxWidth:800,margin:"0 auto 24px",position:"relative",zIndex:1}}>
-          &ldquo;{pc.aboutQuote?.text || "What I tell anyone who wants to create is simple: Do it. It doesn\u2019t matter what others think \u2014 create for yourself. It is good for the soul and well-being. Feel the freedom!"}&rdquo;
+          &ldquo;{aboutQuoteText}&rdquo;
         </p>
         <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.8rem",fontWeight:500,letterSpacing:"0.15em",textTransform:"uppercase",color:"#C5CFBC",position:"relative",zIndex:1}}>&mdash; {pc.aboutQuote?.attribution || "Carolyn Jenkins"}</div>
       </div>
@@ -249,12 +295,12 @@ export default function AboutPage() {
         <div style={{maxWidth:720,margin:"0 auto"}}>
           <div className="reveal-up" style={{textAlign:"center",marginBottom:48}}>
             <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C47D5A",marginBottom:16}}>{pc.aboutPersonalNote?.eyebrow || "A Personal Note"}</div>
-            <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(2rem,3.5vw,2.8rem)",fontWeight:400,color:"#2A2520"}}>Gratitude &amp; <em style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:300,color:"#C47D5A"}}>Freedom</em></h2>
+            <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(2rem,3.5vw,2.8rem)",fontWeight:400,color:"#2A2520"}}>Gratitude &amp; <em style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:300,color:"#C47D5A"}}>Practice</em></h2>
           </div>
           <div className="reveal-up">
             <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:24}}>{pc.aboutPersonalNote?.paragraph1 || "My path as an artist has been defined by both passion and sacrifice. The decision to forgo Ringling in 1972 shaped everything that followed \u2014 it taught me that art is not just what you put on canvas, but the choices you make with your life."}</p>
-            <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:24}}>{pc.aboutPersonalNote?.paragraph2 || "I am not inspired by any single artist. I feel if I was, I would just be considered a copier. I proceed because it\u2019s my way naturally \u2014 to project my emotions, my method of communication, my heart and soul."}</p>
-            <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:40}}>{pc.aboutPersonalNote?.paragraph3 || "I love to utilize recycled pieces in some of my paintings and explore as far as I can with my work. Every day I paint, I exceed my own limitations and imagination."}</p>
+            <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:24}}>{personalNoteParagraph2}</p>
+            <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.95rem",fontWeight:300,lineHeight:1.9,color:"#3D3530",marginBottom:40}}>{personalNoteParagraph3}</p>
           </div>
           <div className="reveal-up" style={{display:"flex",gap:20,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}}>
             <a href="/#gallery" className="btn-primary">{pc.aboutPersonalNote?.ctaPrimary || "View My Work"}</a>
