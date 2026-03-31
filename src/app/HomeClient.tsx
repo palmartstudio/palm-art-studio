@@ -15,18 +15,75 @@ interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?
 interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
 interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; heroImages:(string|null)[]; }
 
+function preferUpdatedCopy(value: string | undefined, legacy: string, updated: string) {
+  if (!value || value === legacy) return updated;
+  return value;
+}
+
 export default function HomeClient({ settings, artist, artwork, shopItems, events, portraitUrl, pageContent, heroImages }:Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const pc = pageContent || {};
 
   const artistName = artist?.name || "Carolyn Jenkins";
   const studioLocation = artist?.studioLocation || "Deltona, FL";
-  const quote = artist?.quote || "It doesn't matter what others think—create for yourself. It is good for the soul and well-being. Feel the freedom!";
-  const heroTitle = settings?.heroTitle || "Art from the Soul";
-  const pc = pageContent || {};
+  const heroSubtitle = preferUpdatedCopy(
+    settings?.heroSubtitle,
+    "Original watercolors, acrylics, and mixed media from Carolyn Jenkins — each piece carries emotion, story, and soul.",
+    "Original paintings, prints, and commissions from Carolyn Jenkins in Deltona, Florida."
+  );
+  const homeStatement = pc.homeQuoteBanner?.text || "A lifetime of art-making, from commercial design to studio practice.";
+  const galleryDescription = preferUpdatedCopy(
+    pc.homeGallery?.description,
+    "From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul.",
+    "Watercolors, mixed media, and acrylic works inspired by Florida light, architecture, and everyday observation."
+  );
+  const aboutHeading = preferUpdatedCopy(
+    pc.homeAbout?.heading,
+    "From AOL & Disney to Fine Art",
+    "A Life in Art and <em>Design</em>"
+  );
+  const aboutParagraph1 = preferUpdatedCopy(
+    pc.homeAbout?.paragraph1,
+    "Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey spans from the Maitland Center of the Arts and Rollins College to founding her own design firm, Storm Hill Studio.",
+    "Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey has taken her from the Maitland Art Center and Rollins College to establishing her own design firm, Storm Hill Studio."
+  );
+  const aboutParagraph2 = pc.homeAbout?.paragraph2 || "Her commercial career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park. She went on to create original icon art for AOL's early user interface, design menus for Walt Disney World and Darden Restaurants, illustrate for the Wayne Taylor Indy Racing team, and create packaging for brands like Juice Bowl.";
+  const aboutParagraph3Template = pc.homeAbout?.paragraph3 || "Now based in {studioLocation}, Carolyn continues to create works in acrylic and watercolor, with over fourteen years exhibiting in art festivals across Florida.";
+  const commercialDescription = preferUpdatedCopy(
+    pc.homeCommercial?.description,
+    "Decades of professional design work for iconic brands.",
+    "Decades of design and illustration work, from hand-drawn packaging and print pieces to early digital interface art."
+  );
+  const shopTitle = preferUpdatedCopy(pc.homeShop?.title, "Bring Art Home", "Available Work");
+  const shopDescription = preferUpdatedCopy(
+    pc.homeShop?.description,
+    "Original paintings, limited edition prints, and commissions. Each piece ships with a certificate of authenticity.",
+    "Original paintings, limited edition prints, and commissions, each prepared with care for collectors and clients."
+  );
+  const eventsDescription = preferUpdatedCopy(
+    pc.homeEvents?.description,
+    "Join Carolyn at upcoming exhibitions, art festivals, and studio events.",
+    "Join Carolyn for exhibitions, art festivals, and studio events in Florida and beyond."
+  );
+  const contactTitle = preferUpdatedCopy(pc.homeContact?.title, "Let’s Connect", "Inquiries & Commissions");
+  const contactDescription = preferUpdatedCopy(
+    pc.homeContact?.description,
+    "Interested in a commission, a purchase, or just want to talk art? Reach out anytime.",
+    "Interested in a commission, available work, or a studio inquiry? Reach out anytime."
+  );
+  const displayCredentials = (artist?.credentials || [
+    { number: "40+", label: "Years Creating" },
+    { number: "14+", label: "Years Exhibiting" },
+    { number: "Multiple", label: "Festival Honors" },
+  ]).map((c) =>
+    c.label === "Awards Won" && c.number === "6+"
+      ? { number: "Multiple", label: "Festival Honors" }
+      : c
+  );
 
   // Nav scroll
   useEffect(() => {
@@ -238,10 +295,10 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           <div className="hero-text">
             <div className="hero-eyebrow h-eyebrow">{artistName} · {studioLocation}</div>
             <h1 className="hero-title">
-              <span className="h-title-1" style={{ display:"block" }}>Art from the</span>
-              <em className="h-title-2" style={{ display:"block" }}>Soul</em>
+              <span className="h-title-1" style={{ display:"block" }}>A Florida Artist</span>
+              <em className="h-title-2" style={{ display:"block" }}>with a Designer's Eye</em>
             </h1>
-            <p className="hero-subtitle h-sub">&ldquo;{quote}&rdquo;</p>
+            <p className="hero-subtitle h-sub">{heroSubtitle}</p>
             <div className="hero-actions h-actions">
               <a href="/gallery" className="btn-primary">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
               <a href="#shop" className="btn-secondary">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
@@ -276,7 +333,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         <div className="section-header g-header">
           <div className="section-eyebrow">{pc.homeGallery?.eyebrow || "Featured Works"}</div>
           <h2 className="section-title">{pc.homeGallery?.title || "The Collection"}</h2>
-          <p className="section-desc">{pc.homeGallery?.description || "From watercolors of historic Florida architecture to bold mixed-media explorations — each piece carries emotion, story, and soul."}</p>
+          <p className="section-desc">{galleryDescription}</p>
         </div>
         <div className="gallery-grid">
           {displayArtwork.slice(0,6).map((item, i) => (
@@ -310,16 +367,12 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           </div>
           <div className="about-body">
             <div className="section-eyebrow">{pc.homeAbout?.eyebrow || "The Artist"}</div>
-            <h3 dangerouslySetInnerHTML={{ __html: pc.homeAbout?.heading || "From AOL &amp; Disney to <em>Fine Art</em>" }} />
-            <p>{pc.homeAbout?.paragraph1 || "Born in Towson, Maryland, and raised in Winter Park, Florida, Carolyn Jenkins has been painting and creating since childhood. Her artistic journey spans from the Maitland Center of the Arts and Rollins College to founding her own design firm, Storm Hill Studio."}</p>
-            <p>{pc.homeAbout?.paragraph2 || "Her commercial career began in the pre-digital era at Tom Griffin Commercial Art Studio in Winter Park. She went on to create original icon art for AOL's early user interface, design menus for Walt Disney World and Darden Restaurants, illustrate for the Wayne Taylor Indy Racing team, and create packaging for brands like Juice Bowl."}</p>
-            <p>{(pc.homeAbout?.paragraph3 || "Now based in {studioLocation}, Carolyn continues to create works in acrylic and watercolor, with over fourteen years exhibiting in art festivals across Florida.").replace("{studioLocation}", studioLocation)}</p>
+            <h3 dangerouslySetInnerHTML={{ __html: aboutHeading }} />
+            <p>{aboutParagraph1}</p>
+            <p>{aboutParagraph2}</p>
+            <p>{aboutParagraph3Template.replace("{studioLocation}", studioLocation)}</p>
             <div className="about-credentials">
-              {(artist?.credentials || [
-                { number: "40+", label: "Years Creating" },
-                { number: "14+", label: "Years Exhibiting" },
-                { number: "6+",  label: "Awards Won" },
-              ]).map((c, i) => (
+              {displayCredentials.map((c, i) => (
                 <div key={i} className="credential">
                   <div className="credential-number">{c.number}</div>
                   <div className="credential-label">{c.label}</div>
@@ -335,7 +388,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeCommercial?.eyebrow || "Commercial Work"}</div>
           <h2 className="section-title">{pc.homeCommercial?.title || "Design & Illustration"}</h2>
-          <p className="section-desc">{pc.homeCommercial?.description || "Decades of professional design work for iconic brands."}</p>
+          <p className="section-desc">{commercialDescription}</p>
         </div>
         <div className="commercial-grid">
           {(artist?.commercialClients || [
@@ -358,8 +411,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
       {/* ═══ QUOTE ═══ */}
       <div className="quote-banner">
-        <p className="quote-text">&ldquo;{quote}&rdquo;</p>
-        <div className="quote-attr">— {artistName}</div>
+        <p className="quote-text">{homeStatement}</p>
       </div>
 
 
@@ -367,8 +419,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       <section id="shop">
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeShop?.eyebrow || "Shop"}</div>
-          <h2 className="section-title">{pc.homeShop?.title || "Bring Art Home"}</h2>
-          <p className="section-desc">{pc.homeShop?.description || "Original paintings, limited edition prints, and commissions. Each piece ships with a certificate of authenticity."}</p>
+          <h2 className="section-title">{shopTitle}</h2>
+          <p className="section-desc">{shopDescription}</p>
         </div>
         <div className="shop-grid">
           {displayShop.map((item, i) => (
@@ -399,7 +451,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeEvents?.eyebrow || "Community"}</div>
           <h2 className="section-title">{pc.homeEvents?.title || "Shows & Events"}</h2>
-          <p className="section-desc">{pc.homeEvents?.description || "Join Carolyn at upcoming exhibitions, art festivals, and studio events."}</p>
+          <p className="section-desc">{eventsDescription}</p>
         </div>
         <div className="events-list">
           {displayEvents.map((evt) => {
@@ -440,8 +492,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       <section id="contact">
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeContact?.eyebrow || "Get in Touch"}</div>
-          <h2 className="section-title">{pc.homeContact?.title || "Let's Connect"}</h2>
-          <p className="section-desc">{pc.homeContact?.description || "Interested in a commission, a purchase, or just want to talk art? Reach out anytime."}</p>
+          <h2 className="section-title">{contactTitle}</h2>
+          <p className="section-desc">{contactDescription}</p>
         </div>
         <div className="contact-grid">
           <div className="contact-info">
