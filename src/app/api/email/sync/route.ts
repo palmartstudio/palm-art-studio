@@ -1,5 +1,6 @@
 // ═══ Palm Art Studio — IMAP Sync Route ═══
 // Polls Spacemail via IMAP, pulls new messages into Supabase
+// Uses mailparser for proper MIME decoding (base64, quoted-printable, multipart)
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase";
 import { checkAdminAuth } from "../../../../lib/email";
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const { ImapFlow } = await import("imapflow");
+    const { simpleParser } = await import("mailparser");
+
     const client = new ImapFlow({
       host: IMAP_HOST, port: IMAP_PORT, secure: true,
       auth: { user: IMAP_USER(), pass: IMAP_PASS() },
@@ -34,7 +37,6 @@ export async function POST(req: NextRequest) {
     for (const folderName of folders) {
       const lock = await client.getMailboxLock(folderName);
       try {
-        // Fetch last 50 messages (or all if fewer)
         const status = await client.status(folderName, { messages: true });
         const total = status.messages || 0;
         if (total === 0) continue;
@@ -58,39 +60,34 @@ export async function POST(req: NextRequest) {
           const isRead = flags.has("\\Seen");
           const isStarred = flags.has("\\Flagged");
 
-          // Parse body from source
+          // Use mailparser for proper MIME decoding
           let bodyHtml: string | null = null;
           let bodyText: string | null = null;
+          let inReplyTo: string | undefined;
           if (msg.source) {
-            const raw = msg.source.toString();
-            // Simple body extraction
-            const htmlMatch = raw.match(/<html[\s\S]*?<\/html>/i);
-            if (htmlMatch) bodyHtml = htmlMatch[0];
-            // Extract plain text (between boundaries or after headers)
-            const textMatch = raw.match(/Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|\r?\n\.\r?\n|$)/i);
-            if (textMatch) bodyText = textMatch[1].replace(/=\r?\n/g, "").trim();
-            if (!bodyText && !bodyHtml) {
-              // Fallback: everything after double newline
+            try {
+              const parsed = await simpleParser(msg.source);
+              bodyHtml = parsed.html ? String(parsed.html) : null;
+              bodyText = parsed.text || null;
+              if (parsed.inReplyTo) {
+                inReplyTo = String(parsed.inReplyTo).replace(/[<>\s]/g, "").trim();
+              }
+            } catch (parseErr) {
+              // Fallback: raw text
+              const raw = msg.source.toString();
               const parts = raw.split(/\r?\n\r?\n/);
               if (parts.length > 1) bodyText = parts.slice(1).join("\n\n").substring(0, 5000);
             }
           }
 
-          // Thread matching via In-Reply-To
+          // Thread matching
           let threadId: string | undefined;
-          let inReplyTo: string | undefined;
-          if (msg.source) {
-            const raw = msg.source.toString();
-            const irtMatch = raw.match(/^In-Reply-To:\s*(.+)/mi);
-            if (irtMatch) inReplyTo = irtMatch[1].replace(/[<>\s]/g, "").trim();
-          }
           if (inReplyTo) {
             const { data: match } = await supabaseAdmin
               .from("email_messages").select("thread_id")
               .eq("resend_message_id", inReplyTo).single();
             if (match) threadId = match.thread_id;
           }
-          // Fallback: match by subject
           if (!threadId) {
             const cleanSubj = subject.replace(/^(Re:|Fwd?:)\s*/gi, "").trim();
             if (cleanSubj) {
