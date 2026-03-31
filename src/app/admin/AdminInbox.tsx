@@ -128,22 +128,33 @@ export default function AdminInbox(){
   const showToast=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
   // ── History-aware navigation (Android back button support) ──
+  const viewRef = useRef<View>("list");
+  const sidebarRef = useRef(false);
   const setView=(v:View)=>{
-    if(v!=="list"){window.history.pushState({emailView:v},"");}
+    viewRef.current = v;
+    if(v !== "list"){ window.history.pushState({emailView:v},""); }
     setViewRaw(v);
   };
+  // Keep refs in sync
+  useEffect(()=>{ sidebarRef.current = sidebar; },[sidebar]);
   useEffect(()=>{
-    const onPop=(e:PopStateEvent)=>{
-      // If sidebar is open, close it instead of navigating
-      if(sidebar){setSidebar(false);window.history.pushState({emailView:view},"");return;}
-      // Navigate back through email views
-      if(view==="compose"){setViewRaw(sel?"thread":"list");return;}
-      if(view==="thread"){setViewRaw("list");setSel(null);return;}
-      // If on list view, let the browser handle it (goes back to admin)
+    const onPop = (e: PopStateEvent) => {
+      const cv = viewRef.current;
+      // Sidebar open? Close it, re-push state so we don't lose position
+      if(sidebarRef.current){ setSidebar(false); if(cv !== "list") window.history.pushState({emailView:cv},""); return; }
+      // Navigate back through views
+      if(cv === "compose"){
+        viewRef.current = sel ? "thread" : "list";
+        setViewRaw(viewRef.current);
+        if(sel) window.history.pushState({emailView:"thread"},"");
+        return;
+      }
+      if(cv === "thread"){ viewRef.current = "list"; setViewRaw("list"); setSel(null); return; }
+      // On list — don't prevent, let AdminApp or browser handle it
     };
-    window.addEventListener("popstate",onPop);
-    return()=>window.removeEventListener("popstate",onPop);
-  },[view,sel,sidebar]);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  },[]);
 
   const editor=useEditor({extensions:[StarterKit,Link.configure({openOnClick:false}),Underline,Placeholder.configure({placeholder:"Write your message..."})],content:""});
 
