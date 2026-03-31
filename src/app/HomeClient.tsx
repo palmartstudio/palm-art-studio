@@ -12,7 +12,7 @@ interface Event { _id:string; title:string; date:string; location?:string; rsvpU
 interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
 interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?:string; email?:string; quote?:string; portrait?:any; credentials?:{number:string;label:string}[]; commercialClients?:{name:string;description:string}[]; socialLinks?:{platform:string;url:string;label:string}[]; }
 
-interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
+interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeQuoteBanner?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
 interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; heroImages:(string|null)[]; }
 
 function preferUpdatedCopy(value: string | undefined, legacy: string, updated: string) {
