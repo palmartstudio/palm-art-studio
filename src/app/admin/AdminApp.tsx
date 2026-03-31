@@ -1095,7 +1095,14 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ═══════════════════════════════════════
 export default function AdminApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTabRaw] = useState<Tab>("dashboard");
+  // ── History-aware tab navigation (Android back button) ──
+  const setActiveTab = (tab: Tab) => { if (tab !== "dashboard") { window.history.pushState({ adminTab: tab }, ""); } setActiveTabRaw(tab); };
+  useEffect(() => {
+    const onPop = () => { if (activeTab !== "dashboard") { setActiveTabRaw("dashboard"); } };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [activeTab]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<Stats>({ artworkCount: 0, availableCount: 0, shopCount: 0, eventCount: 0 });
 
