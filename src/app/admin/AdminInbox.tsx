@@ -97,11 +97,14 @@ export default function AdminInbox(){
   const showToast=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),3000);};
   const editor=useEditor({extensions:[StarterKit,Link.configure({openOnClick:false}),Underline,Placeholder.configure({placeholder:"Write your message..."})],content:""});
 
-  // ── Data ──
+  // ── Data: load cached first, then sync in background ──
+  const syncRef=useRef(false);
   const sync=useCallback(async()=>{await fetch("/api/email/sync",{method:"POST"}).catch(()=>null);},[]);
   const load=useCallback(async()=>{setLoading(true);const r=await fetch(`/api/email/threads?folder=${folder}`).catch(()=>null);if(r?.ok){const d=await r.json();setThreads(d.threads||[]);setFc(d.folderCounts||{});}setLoading(false);},[folder]);
-  useEffect(()=>{sync().then(()=>load());},[sync,load]);
-  useEffect(()=>{const iv=setInterval(()=>{sync().then(()=>load());},30000);return()=>clearInterval(iv);},[sync,load]);
+  // On mount: load cached threads immediately, then sync IMAP in background
+  useEffect(()=>{load().then(()=>{if(!syncRef.current){syncRef.current=true;sync().then(()=>load());}});},[load,sync]);
+  // Poll every 60s (not 30s — reduce load)
+  useEffect(()=>{const iv=setInterval(()=>{sync().then(()=>load());},60000);return()=>clearInterval(iv);},[sync,load]);
   useEffect(()=>{if(msgs.length)setTimeout(()=>msgEnd.current?.scrollIntoView({behavior:"smooth"}),100);},[msgs]);
 
   const openThread=async(t:Thread)=>{setSel(t);setView("thread");setSidebar(false);const r=await fetch("/api/email/threads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:t.thread_id})});if(r?.ok){const d=await r.json();setMsgs(d.messages||[]);}setThreads(p=>p.map(x=>x.thread_id===t.thread_id?{...x,unread_count:0}:x));};
