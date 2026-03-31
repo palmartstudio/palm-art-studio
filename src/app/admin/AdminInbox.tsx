@@ -1,5 +1,6 @@
 "use client";
-// ═══ Palm Art Studio — Email Client (Mobile Optimized) ═══
+// ═══ Palm Art Studio — Full-Screen Email Client ═══
+// Modeled after Gmail: full-screen mobile views, proper HTML rendering
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -7,283 +8,384 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 
+// ── Brand ──
 const C = {
-  bg: "#0a0906", bg2: "#141210", bg3: "#1c1915",
+  bg: "#0a0906", bg2: "#111110", bg3: "#1c1915",
   border: "rgba(245,240,232,0.06)", border2: "rgba(245,240,232,0.12)",
   text: "#F5F0E8", muted: "#8B7F72", dim: "#4a4440",
-  terra: "#C47D5A", gold: "#C4A86E", sage: "#8B9A7E",
+  terra: "#C47D5A", gold: "#C4A86E",
 };
-const FROM_EMAIL = "cj@palmartstudio.com";
+const FROM = "cj@palmartstudio.com";
 
+// ── Types ──
 interface Thread { thread_id:string; subject:string; to_email:string; from_email:string; latest_message:string; latest_body_preview:string; latest_direction:string; message_count:number; unread_count:number; starred:boolean; has_attachments:boolean; created_at:string; customer_name?:string; }
-interface Message { id:string; thread_id:string; direction:string; from_email:string; to_email:string; subject:string; body_html:string|null; body_text:string|null; read:boolean; starred:boolean; folder:string; created_at:string; cc_emails:string[]; bcc_emails:string[]; has_attachments:boolean; is_draft:boolean; attachments:{id:string;filename:string;content_type:string;size_bytes:number;s3_url:string}[]; }
+interface Msg { id:string; thread_id:string; direction:string; from_email:string; to_email:string; subject:string; body_html:string|null; body_text:string|null; read:boolean; starred:boolean; folder:string; created_at:string; cc_emails:string[]; bcc_emails:string[]; has_attachments:boolean; is_draft:boolean; attachments:{id:string;filename:string;content_type:string;size_bytes:number;s3_url:string}[]; }
 type Folder = "inbox"|"sent"|"drafts"|"starred"|"trash"|"spam";
 type View = "list"|"thread"|"compose";
 
-const FOLDERS: {key:Folder;label:string;icon:string}[] = [
-  {key:"inbox",label:"Inbox",icon:"✉️"},{key:"starred",label:"Starred",icon:"⭐"},
+const FOLDERS:{key:Folder;label:string;icon:string}[] = [
+  {key:"inbox",label:"Inbox",icon:"📥"},{key:"starred",label:"Starred",icon:"⭐"},
   {key:"sent",label:"Sent",icon:"📨"},{key:"drafts",label:"Drafts",icon:"📝"},
   {key:"trash",label:"Trash",icon:"🗑️"},{key:"spam",label:"Spam",icon:"⚠️"},
 ];
-function avatarColor(email:string):string {
-  const colors=["#C47D5A","#C4A86E","#8B9A7E","#3b8dd4","#EC4899","#8B5CF6","#EF4444","#06B6D4","#22C55E","#F97316"];
-  let h=0;for(let i=0;i<email.length;i++)h=email.charCodeAt(i)+((h<<5)-h);return colors[Math.abs(h)%colors.length];
-}
-function timeAgo(d:string){const diff=Date.now()-new Date(d).getTime();if(diff<60000)return"now";if(diff<3600000)return`${Math.floor(diff/60000)}m`;if(diff<86400000)return`${Math.floor(diff/3600000)}h`;const days=Math.floor(diff/86400000);if(days<7)return`${days}d`;return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"});}
-function formatDate(d:string){return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});}
-function formatSize(b:number){if(b<1024)return`${b}B`;if(b<1048576)return`${(b/1024).toFixed(1)}KB`;return`${(b/1048576).toFixed(1)}MB`;}
 
-// ── Email body renderer (iframe for proper HTML isolation) ──
-function EmailBody({ html, text }: { html: string | null; text: string | null }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(120);
+function avatarColor(e:string){const c=["#C47D5A","#C4A86E","#8B9A7E","#3b8dd4","#EC4899","#8B5CF6","#EF4444","#06B6D4","#22C55E","#F97316"];let h=0;for(let i=0;i<e.length;i++)h=e.charCodeAt(i)+((h<<5)-h);return c[Math.abs(h)%c.length];}
+function timeAgo(d:string){const diff=Date.now()-new Date(d).getTime();if(diff<60000)return"now";if(diff<3600000)return`${Math.floor(diff/60000)}m`;if(diff<86400000)return`${Math.floor(diff/3600000)}h`;const days=Math.floor(diff/86400000);return days<7?`${days}d`:new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"});}
+function formatDate(d:string){return new Date(d).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",hour12:true});}
+function fmtSize(b:number){if(b<1024)return`${b}B`;if(b<1048576)return`${(b/1024).toFixed(0)}KB`;return`${(b/1048576).toFixed(1)}MB`;}
 
-  useEffect(() => {
-    if (!iframeRef.current || !html) return;
-    const doc = iframeRef.current.contentDocument;
-    if (!doc) return;
+// ── Responsive hook ──
+function useIsDesktop(){const[d,setD]=useState(false);useEffect(()=>{const c=()=>setD(window.innerWidth>=768);c();window.addEventListener("resize",c);return()=>window.removeEventListener("resize",c);},[]);return d;}
+
+// ── Email HTML renderer (iframe sandbox) ──
+function EmailBody({html,text}:{html:string|null;text:string|null}){
+  const ref=useRef<HTMLIFrameElement>(null);
+  const[h,setH]=useState(150);
+  useEffect(()=>{
+    if(!ref.current||!html)return;
+    const doc=ref.current.contentDocument;if(!doc)return;
     doc.open();
     doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-      body{margin:0;padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.6;color:#333;word-wrap:break-word;background:#fff;}
-      img{max-width:100%;height:auto;}
-      a{color:#C47D5A;}
-      table{max-width:100%!important;width:auto!important;}
-      *{max-width:100%!important;box-sizing:border-box;}
+      body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.65;color:#222;background:#fff;word-wrap:break-word;overflow-wrap:break-word;}
+      img{max-width:100%!important;height:auto!important;}a{color:#C47D5A;}
+      table{max-width:100%!important;}*{max-width:100%!important;box-sizing:border-box;}
+      blockquote{border-left:3px solid #ddd;margin:10px 0;padding:0 12px;color:#666;}
     </style></head><body>${html}</body></html>`);
     doc.close();
-    // Auto-resize iframe to content
-    const resize = () => {
-      if (doc.body) {
-        const h = doc.body.scrollHeight;
-        if (h > 40) setHeight(Math.min(h + 20, 600));
-      }
-    };
-    setTimeout(resize, 100);
-    setTimeout(resize, 500);
-  }, [html]);
-
-  if (html) {
-    return <iframe ref={iframeRef} style={{ width: "100%", height, border: "none", borderRadius: 6, background: "#fff" }} sandbox="allow-same-origin" />;
-  }
-  return <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0, color: C.text, fontSize: 13, lineHeight: 1.7 }}>{text || "(no content)"}</pre>;
+    const resize=()=>{if(doc.body){const sh=doc.body.scrollHeight;if(sh>50)setH(Math.min(sh+24,800));}};
+    setTimeout(resize,150);setTimeout(resize,600);setTimeout(resize,1500);
+  },[html]);
+  if(html)return <iframe ref={ref} style={{width:"100%",height:h,border:"none",borderRadius:8,background:"#fff"}} sandbox="allow-same-origin"/>;
+  return <pre style={{whiteSpace:"pre-wrap",fontFamily:"inherit",margin:0,color:C.text,fontSize:15,lineHeight:1.65}}>{text||"(no content)"}</pre>;
 }
 
-// ── Rich text toolbar ──
+// ── Toolbar ──
 function Toolbar({editor}:{editor:any}){
   if(!editor)return null;
-  const Btn=({onClick,active,children}:{onClick:()=>void;active?:boolean;children:React.ReactNode})=>(<button onClick={onClick} style={{padding:"5px 8px",borderRadius:4,border:"none",cursor:"pointer",background:active?`rgba(196,125,90,0.15)`:"transparent",color:active?C.terra:C.muted,fontSize:14,minWidth:28,minHeight:28}}>{children}</button>);
-  return(<div style={{display:"flex",gap:2,padding:"6px 8px",borderBottom:`1px solid ${C.border}`,flexWrap:"wrap"}}>
-    <Btn onClick={()=>editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")}><b>B</b></Btn>
-    <Btn onClick={()=>editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")}><em>I</em></Btn>
-    <Btn onClick={()=>editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")}><u>U</u></Btn>
-    <div style={{width:1,background:C.border2,margin:"0 3px"}}/>
-    <Btn onClick={()=>editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")}>•</Btn>
-    <Btn onClick={()=>editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")}>1.</Btn>
-    <Btn onClick={()=>{const url=prompt("Link URL:");if(url)editor.chain().focus().setLink({href:url}).run();}}>🔗</Btn>
-  </div>);
+  const b=(active:boolean,onClick:()=>void,label:string)=><button key={label} onClick={onClick} style={{padding:"6px 8px",borderRadius:4,border:"none",cursor:"pointer",background:active?"rgba(196,125,90,0.2)":"transparent",color:active?C.terra:C.muted,fontSize:15,fontWeight:active?700:400,minWidth:32,minHeight:32}}>{label}</button>;
+  return <div style={{display:"flex",gap:2,padding:"6px 10px",borderBottom:`1px solid ${C.border}`,flexWrap:"wrap",background:"rgba(0,0,0,0.2)"}}>
+    {b(editor.isActive("bold"),()=>editor.chain().focus().toggleBold().run(),"B")}
+    {b(editor.isActive("italic"),()=>editor.chain().focus().toggleItalic().run(),"I")}
+    {b(editor.isActive("underline"),()=>editor.chain().focus().toggleUnderline().run(),"U")}
+    <span style={{width:1,background:C.border2,margin:"0 4px"}}/>
+    {b(editor.isActive("bulletList"),()=>editor.chain().focus().toggleBulletList().run(),"•")}
+    {b(editor.isActive("orderedList"),()=>editor.chain().focus().toggleOrderedList().run(),"1.")}
+    {b(false,()=>{const url=prompt("Link URL:");if(url)editor.chain().focus().setLink({href:url}).run();},"🔗")}
+  </div>;
 }
 
 // ═══ MAIN COMPONENT ═══
-export default function AdminInbox() {
-  const [view,setView]=useState<View>("list");
-  const [folder,setFolder]=useState<Folder>("inbox");
-  const [threads,setThreads]=useState<Thread[]>([]);
-  const [fc,setFc]=useState<Record<string,number>>({});
-  const [sel,setSel]=useState<Thread|null>(null);
-  const [messages,setMessages]=useState<Message[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [sending,setSending]=useState(false);
-  const [search,setSearch]=useState("");
-  const [composeTo,setComposeTo]=useState("");
-  const [composeSubject,setComposeSubject]=useState("");
-  const [composeCC,setComposeCC]=useState("");
-  const [showCC,setShowCC]=useState(false);
-  const [composeMode,setComposeMode]=useState<"new"|"reply"|"forward"|null>(null);
-  const [toast,setToast]=useState<string|null>(null);
-  const [showSidebar,setShowSidebar]=useState(false);
+export default function AdminInbox(){
+  const isDesktop=useIsDesktop();
+  const[view,setView]=useState<View>("list");
+  const[folder,setFolder]=useState<Folder>("inbox");
+  const[threads,setThreads]=useState<Thread[]>([]);
+  const[fc,setFc]=useState<Record<string,number>>({});
+  const[sel,setSel]=useState<Thread|null>(null);
+  const[msgs,setMsgs]=useState<Msg[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[sending,setSending]=useState(false);
+  const[search,setSearch]=useState("");
+  const[composeTo,setComposeTo]=useState("");
+  const[composeSubject,setComposeSubject]=useState("");
+  const[composeCC,setComposeCC]=useState("");
+  const[showCC,setShowCC]=useState(false);
+  const[composeMode,setComposeMode]=useState<"new"|"reply"|"forward"|null>(null);
+  const[toast,setToast]=useState<string|null>(null);
+  const[sidebar,setSidebar]=useState(false);
   const msgEnd=useRef<HTMLDivElement>(null);
   const showToast=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),3000);};
   const editor=useEditor({extensions:[StarterKit,Link.configure({openOnClick:false}),Underline,Placeholder.configure({placeholder:"Write your message..."})],content:""});
 
-  const syncImap=useCallback(async()=>{await fetch("/api/email/sync",{method:"POST"}).catch(()=>null);},[]);
-  const loadThreads=useCallback(async()=>{setLoading(true);const r=await fetch(`/api/email/threads?folder=${folder}`).catch(()=>null);if(r?.ok){const d=await r.json();setThreads(d.threads||[]);setFc(d.folderCounts||{});}setLoading(false);},[folder]);
-  useEffect(()=>{syncImap().then(()=>loadThreads());},[syncImap,loadThreads]);
-  useEffect(()=>{const iv=setInterval(()=>{syncImap().then(()=>loadThreads());},30000);return()=>clearInterval(iv);},[syncImap,loadThreads]);
-  useEffect(()=>{if(messages.length)setTimeout(()=>msgEnd.current?.scrollIntoView({behavior:"smooth"}),100);},[messages]);
+  // ── Data ──
+  const sync=useCallback(async()=>{await fetch("/api/email/sync",{method:"POST"}).catch(()=>null);},[]);
+  const load=useCallback(async()=>{setLoading(true);const r=await fetch(`/api/email/threads?folder=${folder}`).catch(()=>null);if(r?.ok){const d=await r.json();setThreads(d.threads||[]);setFc(d.folderCounts||{});}setLoading(false);},[folder]);
+  useEffect(()=>{sync().then(()=>load());},[sync,load]);
+  useEffect(()=>{const iv=setInterval(()=>{sync().then(()=>load());},30000);return()=>clearInterval(iv);},[sync,load]);
+  useEffect(()=>{if(msgs.length)setTimeout(()=>msgEnd.current?.scrollIntoView({behavior:"smooth"}),100);},[msgs]);
 
-  const openThread=async(t:Thread)=>{setSel(t);setView("thread");setShowSidebar(false);const r=await fetch("/api/email/threads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:t.thread_id})});if(r?.ok){const d=await r.json();setMessages(d.messages||[]);}setThreads(p=>p.map(x=>x.thread_id===t.thread_id?{...x,unread_count:0}:x));};
-  const threadAction=async(action:string,ids?:string[])=>{const tids=ids||(sel?[sel.thread_id]:[]);if(!tids.length)return;await fetch("/api/email/threads",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_ids:tids,action})});const m:Record<string,string>={trash:"Moved to trash",star:"Starred",unstar:"Unstarred",mark_read:"Read",mark_unread:"Unread",spam:"Spam"};showToast(m[action]||"Updated");if((action==="trash"||action==="mark_unread")&&view==="thread")setView("list");loadThreads();};
-  const startCompose=(mode:"new"|"reply"|"forward",t?:Thread)=>{setComposeMode(mode);if(mode==="reply"&&t){setComposeTo(t.to_email);setComposeSubject(t.subject);}else if(mode==="forward"&&t){setComposeTo("");setComposeSubject(`Fwd: ${t.subject}`);}else{setComposeTo("");setComposeSubject("");}setComposeCC("");setShowCC(false);editor?.commands.clearContent();setView("compose");setShowSidebar(false);};
-  const handleSend=async()=>{if(!composeTo||!composeSubject)return;setSending(true);const html=editor?.getHTML()||"";const text=editor?.getText()||"";const isReply=composeMode==="reply"&&sel;const url=isReply?"/api/email/reply":"/api/email/compose";const payload=isReply?{thread_id:sel!.thread_id,to_email:composeTo,subject:composeSubject,reply_html:html,reply_body:text,from_email:FROM_EMAIL}:{to_email:composeTo,subject:composeSubject,body_html:html,body:text,cc_emails:composeCC?composeCC.split(",").map((s: string)=>s.trim()):[],from_email:FROM_EMAIL};const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});setSending(false);if(r.ok){showToast("Email sent!");setView("list");loadThreads();}else showToast("Failed to send");};
-  const filtered=threads.filter(t=>!search||t.subject.toLowerCase().includes(search.toLowerCase())||t.to_email.toLowerCase().includes(search.toLowerCase())||(t.customer_name||"").toLowerCase().includes(search.toLowerCase()));
+  const openThread=async(t:Thread)=>{setSel(t);setView("thread");setSidebar(false);const r=await fetch("/api/email/threads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:t.thread_id})});if(r?.ok){const d=await r.json();setMsgs(d.messages||[]);}setThreads(p=>p.map(x=>x.thread_id===t.thread_id?{...x,unread_count:0}:x));};
+  const threadAction=async(action:string)=>{if(!sel)return;await fetch("/api/email/threads",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_ids:[sel.thread_id],action})});const m:Record<string,string>={trash:"Moved to trash",star:"Starred",unstar:"Unstarred",mark_read:"Read",mark_unread:"Unread",spam:"Spam"};showToast(m[action]||"Done");if(action==="trash"||action==="mark_unread")setView("list");load();};
 
-  return (
-    <div style={{display:"flex",height:"calc(100vh - 130px)",background:C.bg2,borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`,position:"relative"}}>
-      {toast&&<div style={{position:"fixed",top:20,right:20,zIndex:9999,background:C.terra,color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
+  const startCompose=(mode:"new"|"reply"|"forward",msg?:Msg)=>{
+    setComposeMode(mode);
+    if(mode==="reply"&&msg){setComposeTo(msg.direction==="inbound"?msg.from_email:msg.to_email);setComposeSubject(msg.subject.startsWith("Re:")?msg.subject:`Re: ${msg.subject}`);editor?.commands.setContent("");}
+    else if(mode==="forward"&&msg){setComposeTo("");setComposeSubject(`Fwd: ${msg.subject.replace(/^Fwd:\s*/i,"")}`);editor?.commands.setContent(`<br><p style="color:#888">---------- Forwarded ----------</p><p style="color:#888">From: ${msg.from_email}<br>Date: ${formatDate(msg.created_at)}<br>Subject: ${msg.subject}</p><br>${msg.body_html||msg.body_text||""}`);}
+    else{setComposeTo("");setComposeSubject("");editor?.commands.setContent("");}
+    setComposeCC("");setShowCC(false);setView("compose");setSidebar(false);
+  };
 
-      {/* Mobile sidebar overlay */}
-      {showSidebar&&<div onClick={()=>setShowSidebar(false)} className="email-sidebar-overlay" style={{position:"absolute",inset:0,background:"rgba(10,9,6,0.6)",zIndex:49,display:"none"}}/>}
+  const handleSend=async()=>{if(!composeTo||!composeSubject)return;setSending(true);const html=editor?.getHTML()||"";const text=editor?.getText()||"";const isReply=composeMode==="reply"&&sel;const url=isReply?"/api/email/reply":"/api/email/compose";const payload=isReply?{thread_id:sel!.thread_id,to_email:composeTo,subject:composeSubject,reply_html:html,reply_body:text,from_email:FROM}:{to_email:composeTo,subject:composeSubject,body_html:html,body:text,cc_emails:composeCC?composeCC.split(",").map((s:string)=>s.trim()):[],from_email:FROM};const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});setSending(false);if(r.ok){showToast("Email sent!");setView("list");load();}else showToast("Failed to send");};
 
-      {/* ── Sidebar ── */}
-      <div className="email-sidebar" style={{width:180,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",background:C.bg,flexShrink:0,zIndex:50,transition:"transform 0.25s ease"}}>
-        <div style={{padding:10}}>
-          <button onClick={()=>startCompose("new")} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"11px 14px",background:C.terra,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}}>✏️ Compose</button>
+  const filtered=threads.filter(t=>!search||t.subject.toLowerCase().includes(search.toLowerCase())||t.to_email.toLowerCase().includes(search.toLowerCase())||t.from_email.toLowerCase().includes(search.toLowerCase()));
+
+  // ═══ COMPOSE — Full Screen on Mobile ═══
+  if(view==="compose"&&!isDesktop){
+    return(
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
+          <button onClick={()=>setView(sel?"thread":"list")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:22}}>✕</button>
+          <h2 style={{flex:1,fontSize:17,fontWeight:600,color:C.text,margin:0}}>{composeMode==="reply"?"Reply":composeMode==="forward"?"Forward":"Compose"}</h2>
+          <button onClick={handleSend} disabled={sending||!composeTo||!composeSubject} style={{padding:"8px 22px",background:sending||!composeTo||!composeSubject?C.dim:C.terra,color:"#fff",border:"none",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:15,fontWeight:700}}>{sending?"...":"Send"}</button>
         </div>
-        <nav style={{flex:1,padding:"0 6px",overflowY:"auto"}}>
-          {FOLDERS.map(f=>{const active=folder===f.key&&view==="list";const count=fc[f.key]||0;return(
-            <button key={f.key} onClick={()=>{setFolder(f.key);setView("list");setShowSidebar(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 10px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,background:active?`rgba(196,125,90,0.15)`:"transparent",color:active?C.terra:C.muted,fontWeight:active?600:400,marginBottom:2}}>
-              <span style={{fontSize:15}}>{f.icon}</span><span style={{flex:1,textAlign:"left"}}>{f.label}</span>
-              {count>0&&<span style={{fontSize:11,fontWeight:600,color:f.key==="inbox"?C.terra:C.dim,background:f.key==="inbox"?"rgba(196,125,90,0.15)":"transparent",padding:"1px 6px",borderRadius:10,minWidth:18,textAlign:"center"}}>{count}</span>}
-            </button>);
-          })}
-        </nav>
+        <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch" as any}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 20px",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{color:C.dim,fontSize:15,width:55}}>To</span>
+            <input value={composeTo} onChange={e=>setComposeTo(e.target.value)} placeholder="Recipient" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:15,color:C.text,fontFamily:"inherit"}}/>
+            {!showCC&&<button onClick={()=>setShowCC(true)} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,fontSize:13}}>Cc</button>}
+          </div>
+          {showCC&&<div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 20px",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{color:C.dim,fontSize:15,width:55}}>Cc</span>
+            <input value={composeCC} onChange={e=>setComposeCC(e.target.value)} style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:15,color:C.text,fontFamily:"inherit"}}/>
+          </div>}
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 20px",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{color:C.dim,fontSize:15,width:55}}>Subject</span>
+            <input value={composeSubject} onChange={e=>setComposeSubject(e.target.value)} placeholder="Subject" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:15,color:C.text,fontFamily:"inherit"}}/>
+          </div>
+          <Toolbar editor={editor}/>
+          <EditorContent editor={editor} style={{minHeight:250,padding:"14px 20px",fontSize:15,lineHeight:1.6,color:C.text}}/>
+        </div>
       </div>
+    );
+  }
 
-      {/* ── Main Content ── */}
-      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-
-        {/* ═══ THREAD LIST ═══ */}
-        {view==="list"&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderBottom:`1px solid ${C.border}`}}>
-            <button className="email-menu-btn" onClick={()=>setShowSidebar(s=>!s)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:4,fontSize:18,display:"none",flexShrink:0}}>☰</button>
-            <div style={{flex:1,display:"flex",alignItems:"center",gap:6,background:C.bg3,borderRadius:8,padding:"7px 10px"}}>
-              <span style={{color:C.dim,fontSize:13}}>🔍</span>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{flex:1,border:"none",background:"none",outline:"none",fontSize:13,fontFamily:"inherit",color:C.text}}/>
-              {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:0,fontSize:14}}>✕</button>}
-            </div>
-            <button onClick={()=>{syncImap().then(()=>loadThreads());}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:16}}>🔄</button>
-          </div>
-          <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-            {loading?<div style={{textAlign:"center",padding:60,color:C.muted,fontSize:13}}>Syncing emails...</div>
-            :filtered.length===0?<div style={{textAlign:"center",padding:60,color:C.muted}}><div style={{fontSize:36,marginBottom:12,opacity:0.3}}>✉️</div><p style={{fontSize:14}}>No messages in {folder}</p></div>
-            :filtered.map(t=>{const unread=t.unread_count>0;const name=t.customer_name||t.to_email.split("@")[0];return(
-              <div key={t.thread_id} onClick={()=>openThread(t)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:unread?"rgba(196,125,90,0.04)":"transparent",transition:"background 0.15s"}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:avatarColor(t.to_email),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:600,flexShrink:0}}>{(name[0]||"?").toUpperCase()}</div>
+  // ═══ THREAD VIEW — Full Screen on Mobile ═══
+  if(view==="thread"&&sel&&!isDesktop){
+    return(
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 8px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+          <button onClick={()=>{setView("list");setSel(null);}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:22}}>←</button>
+          <div style={{flex:1}}/>
+          <button onClick={()=>threadAction("trash")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:18}}>🗑️</button>
+          <button onClick={()=>threadAction(sel.starred?"unstar":"star")} style={{background:"none",border:"none",cursor:"pointer",padding:8,fontSize:18}}>{sel.starred?"⭐":"☆"}</button>
+        </div>
+        {/* Subject */}
+        <div style={{padding:"16px 20px 10px"}}>
+          <h1 style={{fontSize:20,fontWeight:700,color:C.text,margin:0,lineHeight:1.3}}>{sel.subject}</h1>
+          <span style={{display:"inline-block",marginTop:8,fontSize:11,fontWeight:600,color:C.dim,background:"rgba(255,255,255,0.05)",border:`1px solid ${C.border2}`,borderRadius:4,padding:"2px 8px",textTransform:"capitalize"}}>{folder}</span>
+        </div>
+        {/* Messages */}
+        <div style={{flex:1,overflowY:"auto",padding:"8px 16px 16px",WebkitOverflowScrolling:"touch" as any}}>
+          {msgs.length===0?<div style={{textAlign:"center",padding:40,color:C.muted}}>Loading...</div>
+          :msgs.map(msg=>{const out=msg.direction==="outbound";const sender=msg.from_email.split("@")[0];return(
+            <div key={msg.id} style={{background:"rgba(255,255,255,0.02)",borderRadius:16,padding:20,marginBottom:12,border:`1px solid ${C.border}`}}>
+              {/* Sender row */}
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                <div style={{width:42,height:42,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0,background:avatarColor(msg.from_email)+"30",color:avatarColor(msg.from_email)}}>{(sender[0]||"?").toUpperCase()}</div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                    <span style={{fontSize:13,fontWeight:unread?600:400,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
-                    {t.message_count>1&&<span style={{fontSize:10,color:C.dim,background:C.bg3,padding:"1px 5px",borderRadius:8}}>({t.message_count})</span>}
-                    <span style={{flex:1}}/><span style={{fontSize:11,color:C.dim,flexShrink:0}}>{timeAgo(t.latest_message)}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:16,fontWeight:600,color:C.text}}>{out?"You":sender}</span>
+                    <span style={{fontSize:13,color:C.dim}}>{formatDate(msg.created_at)}</span>
                   </div>
-                  <div style={{fontSize:13,fontWeight:unread?500:400,color:unread?C.text:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}}>{t.subject}</div>
-                  <div style={{fontSize:12,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.latest_body_preview}</div>
+                  <div style={{fontSize:13,color:C.dim}}>to {out?msg.to_email:"me"}</div>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,flexShrink:0}}>
-                  {t.starred&&<span style={{fontSize:14}}>⭐</span>}
-                  {t.has_attachments&&<span style={{fontSize:13}}>📎</span>}
-                </div>
-              </div>);
-            })}
-          </div>
-        </>)}
-
-        {/* ═══ THREAD DETAIL ═══ */}
-        {view==="thread"&&sel&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
-            <button onClick={()=>{setView("list");loadThreads();}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:18,flexShrink:0}}>←</button>
-            <h3 style={{flex:1,fontSize:14,fontWeight:600,color:C.text,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sel.subject}</h3>
-            <button onClick={()=>threadAction(sel.starred?"unstar":"star")} style={{background:"none",border:"none",cursor:"pointer",padding:6,fontSize:16}}>{sel.starred?"⭐":"☆"}</button>
-            <button onClick={()=>threadAction("trash")} style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",padding:6,fontSize:16}}>🗑️</button>
-          </div>
-          <div style={{flex:1,overflowY:"auto",padding:"12px",WebkitOverflowScrolling:"touch"}}>
-            {messages.length===0?<div style={{textAlign:"center",padding:40,color:C.muted,fontSize:13}}>Loading messages...</div>
-            :messages.map(msg=>{const out=msg.direction==="outbound";return(
-              <div key={msg.id} style={{marginBottom:12,background:out?"rgba(196,125,90,0.06)":C.bg3,border:`1px solid ${C.border2}`,borderRadius:12,overflow:"hidden"}}>
-                {/* Message header */}
-                <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{width:30,height:30,borderRadius:"50%",background:avatarColor(msg.from_email),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,flexShrink:0}}>{(msg.from_email[0]||"?").toUpperCase()}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:500,color:C.text}}>{out?"You":msg.from_email}</div>
-                    <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>to {out?msg.to_email:"me"} · {formatDate(msg.created_at)}</div>
-                  </div>
-                  {out&&<span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:"rgba(196,125,90,0.15)",color:C.terra,flexShrink:0}}>Sent</span>}
-                </div>
-                {/* Message body — rendered in iframe for HTML emails */}
-                <div style={{padding:"12px",overflow:"hidden"}}>
-                  <EmailBody html={msg.body_html} text={msg.body_text} />
-                </div>
-                {/* Attachments */}
-                {msg.attachments?.length>0&&(
-                  <div style={{padding:"0 12px 10px",display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {msg.attachments.map(a=>(
-                      <a key={a.id} href={a.s3_url} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",background:C.bg,borderRadius:8,textDecoration:"none",color:C.muted,fontSize:12}}>
-                        📎 {a.filename} <span style={{color:C.dim}}>({formatSize(a.size_bytes)})</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>);
-            })}
-            <div ref={msgEnd}/>
-          </div>
-          {/* Reply bar */}
-          <div style={{borderTop:`1px solid ${C.border}`,padding:"10px 12px",display:"flex",gap:8,flexShrink:0}}>
-            <button onClick={()=>startCompose("reply",sel)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 16px",background:C.terra,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}}>↩ Reply</button>
-            <button onClick={()=>startCompose("forward",sel)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px 16px",background:C.bg3,color:C.muted,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>⤻ Forward</button>
-          </div>
-        </>)}
-
-        {/* ═══ COMPOSE ═══ */}
-        {view==="compose"&&(
-          <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
-              <button onClick={()=>setView(sel?"thread":"list")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:18}}>←</button>
-              <h3 style={{flex:1,fontSize:14,fontWeight:600,color:C.text,margin:0}}>{composeMode==="reply"?"Reply":composeMode==="forward"?"Forward":"New Message"}</h3>
-            </div>
-            <div style={{padding:"10px 14px 0",display:"flex",flexDirection:"column",gap:8,flexShrink:0}}>
-              <div className="compose-field" style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,color:C.dim,width:50,flexShrink:0}}>To</span>
-                <input value={composeTo} onChange={e=>setComposeTo(e.target.value)} placeholder="recipient@email.com" style={{flex:1,padding:"9px 10px",borderRadius:8,border:`1px solid ${C.border2}`,background:C.bg3,fontSize:13,fontFamily:"inherit",color:C.text,outline:"none",minWidth:0}}/>
-                <button onClick={()=>setShowCC(!showCC)} style={{background:"none",border:`1px solid ${C.border2}`,borderRadius:6,cursor:"pointer",fontSize:11,color:C.dim,padding:"6px 10px",flexShrink:0}}>CC</button>
+                <button onClick={()=>startCompose("reply",msg)} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:8,fontSize:16}}>↩</button>
               </div>
-              {showCC&&(
-                <div className="compose-field" style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:12,color:C.dim,width:50,flexShrink:0}}>CC</span>
-                  <input value={composeCC} onChange={e=>setComposeCC(e.target.value)} placeholder="cc@email.com" style={{flex:1,padding:"9px 10px",borderRadius:8,border:`1px solid ${C.border2}`,background:C.bg3,fontSize:13,fontFamily:"inherit",color:C.text,outline:"none",minWidth:0}}/>
+              {/* Body */}
+              <EmailBody html={msg.body_html} text={msg.body_text}/>
+              {/* Attachments */}
+              {msg.attachments?.length>0&&(
+                <div style={{marginTop:14,border:`1px solid ${C.border2}`,borderRadius:12,overflow:"hidden"}}>
+                  <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.02)",borderBottom:`1px solid ${C.border}`,fontSize:13,color:C.dim}}>📎 {msg.attachments.length} attachment{msg.attachments.length>1?"s":""}</div>
+                  {msg.attachments.map(a=>(
+                    <a key={a.id} href={a.s3_url} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:`1px solid ${C.border}`,textDecoration:"none",color:C.muted}}>
+                      <span style={{fontSize:18}}>{a.content_type.startsWith("image/")?"🖼️":a.content_type==="application/pdf"?"📄":"📎"}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:500,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.filename}</div>
+                        <div style={{fontSize:11,color:C.dim}}>{fmtSize(a.size_bytes)}</div>
+                      </div>
+                      <span style={{fontSize:14,color:C.dim}}>⬇</span>
+                    </a>
+                  ))}
                 </div>
               )}
-              <div className="compose-field" style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:12,color:C.dim,width:50,flexShrink:0}}>Subject</span>
-                <input value={composeSubject} onChange={e=>setComposeSubject(e.target.value)} placeholder="Email subject" style={{flex:1,padding:"9px 10px",borderRadius:8,border:`1px solid ${C.border2}`,background:C.bg3,fontSize:13,fontFamily:"inherit",color:C.text,outline:"none",minWidth:0}}/>
-              </div>
-            </div>
-            {/* Rich text editor */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",margin:"10px 14px",border:`1px solid ${C.border2}`,borderRadius:10,overflow:"hidden",background:C.bg3,minHeight:0}}>
-              <Toolbar editor={editor}/>
-              <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-                <EditorContent editor={editor} style={{minHeight:160,padding:"10px 14px",fontSize:14,lineHeight:1.6,color:C.text}}/>
-              </div>
-            </div>
-            {/* Send bar */}
-            <div style={{borderTop:`1px solid ${C.border}`,padding:"10px 14px",display:"flex",justifyContent:"flex-end",gap:8,flexShrink:0}}>
-              <button onClick={()=>setView(sel?"thread":"list")} style={{padding:"10px 18px",background:C.bg3,color:C.muted,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13}}>Discard</button>
-              <button onClick={handleSend} disabled={sending||!composeTo||!composeSubject} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 24px",background:sending||!composeTo||!composeSubject?C.dim:C.terra,color:"#fff",border:"none",borderRadius:10,cursor:sending?"not-allowed":"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600}}>{sending?"Sending...":"📨 Send"}</button>
-            </div>
+            </div>);
+          })}
+          <div ref={msgEnd}/>
+        </div>
+        {/* Reply bar (bottom, safe area) */}
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderTop:`1px solid ${C.border}`,flexShrink:0,paddingBottom:"calc(12px + env(safe-area-inset-bottom))"}}>
+          <button onClick={()=>startCompose("reply",msgs[msgs.length-1])} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"14px",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border2}`,borderRadius:24,color:C.muted,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>↩ Reply</button>
+          <button onClick={()=>startCompose("forward",msgs[msgs.length-1])} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"14px",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border2}`,borderRadius:24,color:C.muted,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>⤻ Forward</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══ SIDEBAR OVERLAY (mobile) ═══
+  const SidebarPanel=()=>(
+    <div onClick={()=>setSidebar(false)} style={{position:"fixed",inset:0,zIndex:60}}>
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
+      <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"82%",maxWidth:300,background:C.bg2,display:"flex",flexDirection:"column",animation:"slideIn .25s ease-out"}}>
+        <div style={{padding:"20px 20px 16px"}}>
+          <span style={{fontSize:20,fontWeight:700,color:C.terra,fontFamily:"'DM Serif Display',serif"}}>Palm Art Mail</span>
+        </div>
+        <nav style={{flex:1,overflowY:"auto",padding:"0 8px"}}>
+          {FOLDERS.map(f=>(
+            <button key={f.key} onClick={()=>{setFolder(f.key);setSidebar(false);setSel(null);setView("list");}} style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"14px 16px",borderRadius:24,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:16,fontWeight:folder===f.key?600:400,background:folder===f.key?"rgba(196,125,90,0.1)":"transparent",color:folder===f.key?C.terra:C.muted,marginBottom:2}}>
+              <span style={{fontSize:20}}>{f.icon}</span>
+              <span style={{flex:1,textAlign:"left"}}>{f.label}</span>
+              {(fc[f.key]||0)>0&&<span style={{fontSize:14,fontWeight:600}}>{fc[f.key]}</span>}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <style>{`@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}`}</style>
+    </div>
+  );
+
+  // ═══ DESKTOP LAYOUT ═══
+  if(isDesktop){
+    return(
+      <div style={{display:"flex",height:"calc(100vh - 130px)",background:C.bg2,borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`,position:"relative"}}>
+        {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:9999,background:C.bg3,border:`1px solid rgba(196,125,90,0.3)`,color:C.terra,padding:"10px 20px",borderRadius:20,fontSize:14}}>{toast}</div>}
+        {/* Sidebar */}
+        <div style={{width:200,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",background:C.bg,flexShrink:0}}>
+          <div style={{padding:12}}>
+            <button onClick={()=>startCompose("new")} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:`linear-gradient(135deg,${C.terra},${C.gold})`,color:"#000",border:"none",borderRadius:16,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:700}}>✏️ Compose</button>
           </div>
-        )}
+          <nav style={{flex:1,overflowY:"auto",padding:"0 6px"}}>
+            {FOLDERS.map(f=><button key={f.key} onClick={()=>{setFolder(f.key);setSel(null);setMsgs([]);setView("list");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"8px 14px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,background:folder===f.key?"rgba(196,125,90,0.1)":"transparent",color:folder===f.key?C.terra:C.muted,fontWeight:folder===f.key?600:400,marginBottom:1}}>
+              <span style={{fontSize:16}}>{f.icon}</span><span style={{flex:1,textAlign:"left"}}>{f.label}</span>
+              {(fc[f.key]||0)>0&&f.key!=="sent"&&<span style={{fontSize:12,fontWeight:600}}>{fc[f.key]}</span>}
+            </button>)}
+          </nav>
+        </div>
+        {/* Main area */}
+        <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+          {/* Search bar */}
+          <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px",borderBottom:`1px solid ${C.border}`}}>
+            {sel&&msgs.length>0?<>
+              <button onClick={()=>{setSel(null);setMsgs([]);setView("list");}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:18}}>←</button>
+              <h2 style={{flex:1,fontSize:15,fontWeight:600,color:C.text,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sel.subject}</h2>
+              <button onClick={()=>startCompose("reply",msgs[msgs.length-1])} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:6,fontSize:14}} title="Reply">↩</button>
+              <button onClick={()=>startCompose("forward",msgs[msgs.length-1])} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:6,fontSize:14}} title="Forward">⤻</button>
+              <button onClick={()=>threadAction("trash")} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:6,fontSize:14}} title="Trash">🗑️</button>
+            </>:<>
+              <div style={{flex:1,display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:"rgba(255,255,255,0.02)",borderRadius:20,border:`1px solid ${C.border}`,maxWidth:500}}>
+                <span style={{color:C.dim,fontSize:14}}>🔍</span>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search mail..." style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:14,color:C.text,fontFamily:"inherit"}}/>
+                {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,fontSize:12}}>✕</button>}
+              </div>
+              <button onClick={()=>{sync().then(()=>load());}} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:6,fontSize:14}} title="Refresh">🔄</button>
+            </>}
+          </div>
+          {/* Content */}
+          {view==="compose"?(
+            <div style={{flex:1,overflowY:"auto"}}><div style={{maxWidth:650,margin:"0 auto",padding:24}}>
+              <div style={{background:"rgba(255,255,255,0.02)",border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderBottom:`1px solid ${C.border}`}}>
+                  <h3 style={{fontSize:15,fontWeight:600,color:C.text,margin:0}}>{composeMode==="reply"?"Reply":composeMode==="forward"?"Forward":"New Message"}</h3>
+                  <button onClick={()=>setView("list")} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,fontSize:14}}>✕</button>
+                </div>
+                <div style={{padding:"12px 20px",borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{color:C.dim,fontSize:13,width:50}}>To</span><input value={composeTo} onChange={e=>setComposeTo(e.target.value)} placeholder="recipient@email.com" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:14,color:C.text,fontFamily:"inherit",padding:"4px 0"}}/></div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:C.dim,fontSize:13,width:50}}>Subject</span><input value={composeSubject} onChange={e=>setComposeSubject(e.target.value)} placeholder="Subject" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:14,color:C.text,fontFamily:"inherit",padding:"4px 0"}}/></div>
+                </div>
+                <EditorContent editor={editor} style={{minHeight:300,padding:"16px 20px",fontSize:14,lineHeight:1.6,color:C.text}}/>
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 20px",borderTop:`1px solid ${C.border}`}}>
+                  <button onClick={handleSend} disabled={sending} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 24px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:700,background:`linear-gradient(135deg,${C.terra},${C.gold})`,color:"#000"}}>{sending?"Sending...":"📨 Send"}</button>
+                </div>
+              </div>
+            </div></div>
+          ):sel&&msgs.length>0?(
+            /* Desktop thread detail */
+            <div style={{flex:1,overflowY:"auto"}}><div style={{maxWidth:750,margin:"0 auto",padding:"16px 24px"}}>
+              {msgs.map(msg=>{const out=msg.direction==="outbound";const sender=msg.from_email.split("@")[0];return(
+                <div key={msg.id} style={{background:"rgba(255,255,255,0.015)",borderRadius:12,padding:20,marginBottom:10,border:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                    <div style={{width:38,height:38,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0,background:avatarColor(msg.from_email)+"30",color:avatarColor(msg.from_email)}}>{(sender[0]||"?").toUpperCase()}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:14,fontWeight:600,color:C.text}}>{out?"You":sender}</span>
+                      <span style={{fontSize:12,color:C.dim,marginLeft:8}}>&lt;{msg.from_email}&gt;</span>
+                      <div style={{fontSize:12,color:C.dim}}>to {out?msg.to_email:"me"} · {formatDate(msg.created_at)}</div>
+                    </div>
+                    <button onClick={()=>startCompose("reply",msg)} style={{background:"none",border:"none",cursor:"pointer",color:C.dim,padding:6,fontSize:14}}>↩</button>
+                  </div>
+                  <EmailBody html={msg.body_html} text={msg.body_text}/>
+                  {msg.attachments?.length>0&&(
+                    <div style={{marginTop:14,border:`1px solid ${C.border2}`,borderRadius:12,overflow:"hidden"}}>
+                      <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.02)",borderBottom:`1px solid ${C.border}`,fontSize:13,color:C.dim}}>📎 {msg.attachments.length} attachment{msg.attachments.length>1?"s":""}</div>
+                      {msg.attachments.map(a=><a key={a.id} href={a.s3_url} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderBottom:`1px solid ${C.border}`,textDecoration:"none",color:C.muted,fontSize:13}}><span>{a.content_type.startsWith("image/")?"🖼️":"📎"}</span><span style={{flex:1}}>{a.filename}</span><span style={{color:C.dim}}>{fmtSize(a.size_bytes)}</span><span>⬇</span></a>)}
+                    </div>
+                  )}
+                </div>);
+              })}
+              <div style={{display:"flex",gap:10,padding:"12px 0"}}>
+                <button onClick={()=>startCompose("reply",msgs[msgs.length-1])} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:20,border:`1px solid ${C.border2}`,background:"transparent",color:C.muted,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>↩ Reply</button>
+                <button onClick={()=>startCompose("forward",msgs[msgs.length-1])} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:20,border:`1px solid ${C.border2}`,background:"transparent",color:C.muted,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>⤻ Forward</button>
+              </div>
+            </div></div>
+          ):(
+            /* Desktop thread list */
+            <div style={{flex:1,overflowY:"auto"}}>
+              <div style={{padding:"8px 20px 4px",fontSize:13,color:C.dim,fontWeight:500,textTransform:"capitalize"}}>{folder}</div>
+              {loading?<div style={{textAlign:"center",padding:60,color:C.muted}}>Syncing...</div>
+              :filtered.length===0?<div style={{textAlign:"center",padding:60,color:C.dim}}><div style={{fontSize:40,marginBottom:12,opacity:0.15}}>✉️</div><p style={{fontSize:15}}>No emails</p></div>
+              :filtered.map(t=>{const senderEmail=folder==="sent"?t.to_email:t.from_email;const name=senderEmail.split("@")[0];return(
+                <button key={t.thread_id} onClick={()=>openThread(t)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 20px",border:"none",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:t.unread_count>0?"rgba(196,125,90,0.015)":"transparent",fontFamily:"inherit",textAlign:"left",height:42}}>
+                  <button onClick={e=>{e.stopPropagation();threadAction.call(null,t.starred?"unstar":"star");setSel(t);}} style={{background:"none",border:"none",cursor:"pointer",padding:2,flexShrink:0}}><span style={{fontSize:14,color:t.starred?"#C47D5A":"rgba(255,255,255,0.08)"}}>{t.starred?"★":"☆"}</span></button>
+                  <span style={{width:130,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:14,fontWeight:t.unread_count>0?700:400,color:t.unread_count>0?C.text:"rgba(255,255,255,0.5)"}}>{name}{t.message_count>1?` (${t.message_count})`:""}</span>
+                  <div style={{flex:1,display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                    <span style={{flexShrink:0,fontSize:14,fontWeight:t.unread_count>0?600:400,color:t.unread_count>0?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)"}}>{t.subject}</span>
+                    <span style={{fontSize:13,color:"rgba(255,255,255,0.15)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}> — {t.latest_body_preview}</span>
+                  </div>
+                  <span style={{flexShrink:0,fontSize:12,fontWeight:t.unread_count>0?600:400,color:t.unread_count>0?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.15)"}}>{timeAgo(t.latest_message)}</span>
+                </button>);
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═══ MOBILE LIST VIEW ═══
+  return(
+    <div style={{height:"100%",display:"flex",flexDirection:"column",background:C.bg,position:"relative"}}>
+      {sidebar&&<SidebarPanel/>}
+      {toast&&<div style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:9999,padding:"10px 20px",background:C.bg3,border:`1px solid rgba(196,125,90,0.3)`,borderRadius:20,color:C.terra,fontSize:15}}>{toast}</div>}
+
+      {/* Top bar */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
+        <button onClick={()=>setSidebar(true)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:22}}>☰</button>
+        <div style={{flex:1,display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:C.bg3,borderRadius:24,border:`1px solid ${C.border}`}}>
+          <span style={{color:C.dim,fontSize:16}}>🔍</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search in mail" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:15,color:C.text,fontFamily:"inherit"}}/>
+        </div>
       </div>
 
-      {/* ── Mobile Responsive CSS ── */}
-      <style>{`
-        .ProseMirror { outline: none; min-height: 120px; }
-        .ProseMirror p.is-editor-empty:first-child::before {
-          content: attr(data-placeholder); float: left; color: ${C.dim}; pointer-events: none; height: 0;
-        }
-        @media (max-width: 640px) {
-          .email-sidebar {
-            position: absolute !important; left: 0; top: 0; bottom: 0;
-            transform: translateX(-100%); width: 220px !important;
-            box-shadow: 4px 0 20px rgba(0,0,0,0.4);
-          }
-          .email-sidebar-overlay { display: block !important; }
-        }
-        @media (max-width: 640px) {
-          .email-menu-btn { display: flex !important; }
-        }
-      `}</style>
-      {showSidebar&&<style>{`
-        .email-sidebar { transform: translateX(0) !important; }
-      `}</style>}
+      {/* Folder label */}
+      <div style={{padding:"4px 20px 8px"}}><span style={{fontSize:15,fontWeight:500,color:C.dim,textTransform:"capitalize"}}>{folder}</span></div>
+
+      {/* Thread list */}
+      <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch" as any}}>
+        {loading?<div style={{textAlign:"center",padding:60,color:C.muted}}>Syncing emails...</div>
+        :filtered.length===0?<div style={{textAlign:"center",padding:60,color:C.dim}}><div style={{fontSize:44,opacity:0.1,marginBottom:12}}>✉️</div><p style={{fontSize:16}}>No emails in {folder}</p></div>
+        :filtered.map(t=>{const senderEmail=folder==="sent"?t.to_email:t.from_email;const name=senderEmail.split("@")[0];return(
+          <button key={t.thread_id} onClick={()=>openThread(t)} style={{width:"100%",display:"flex",alignItems:"flex-start",gap:12,padding:"14px 20px",border:"none",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:t.unread_count>0?"rgba(196,125,90,0.015)":"transparent",fontFamily:"inherit",textAlign:"left"}}>
+            <div style={{width:44,height:44,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0,background:avatarColor(senderEmail)+"25",color:avatarColor(senderEmail)}}>{(name[0]||"?").toUpperCase()}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:16,fontWeight:t.unread_count>0?700:500,color:t.unread_count>0?C.text:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+                {t.message_count>1&&<span style={{fontSize:13,color:C.dim}}>{t.message_count}</span>}
+                <span style={{flex:1}}/>
+                <span style={{fontSize:13,color:C.dim,flexShrink:0}}>{timeAgo(t.latest_message)}</span>
+                {t.unread_count>0&&<div style={{width:10,height:10,borderRadius:"50%",background:C.terra,flexShrink:0}}/>}
+              </div>
+              <p style={{fontSize:15,fontWeight:t.unread_count>0?600:400,color:t.unread_count>0?C.text:"rgba(255,255,255,0.4)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.subject}</p>
+              <p style={{fontSize:14,color:"rgba(255,255,255,0.2)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.latest_body_preview}</p>
+            </div>
+            {t.starred&&<span style={{fontSize:16,marginTop:4,flexShrink:0}}>⭐</span>}
+          </button>);
+        })}
+      </div>
+
+      {/* FAB Compose */}
+      <button onClick={()=>startCompose("new")} style={{position:"fixed",bottom:80,right:20,zIndex:30,display:"flex",alignItems:"center",gap:8,padding:"16px 24px",background:C.bg3,border:`1px solid rgba(196,125,90,0.2)`,borderRadius:16,color:C.terra,fontSize:15,fontWeight:700,fontFamily:"inherit",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",marginBottom:"env(safe-area-inset-bottom)"}}>✏️ Compose</button>
+
+      <style>{`.ProseMirror{outline:none;min-height:120px;} .ProseMirror p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:${C.dim};pointer-events:none;height:0;}`}</style>
     </div>
   );
 }
