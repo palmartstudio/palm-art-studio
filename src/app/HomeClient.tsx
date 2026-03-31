@@ -117,120 +117,386 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
   // GSAP animations
   useEffect(() => {
+    const magneticCleanups: Array<() => void> = [];
+
     const ctx = gsap.context(() => {
-      // ── Hero entrance ──
-      const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
-      tl.from(".h-eyebrow",  { y: 30, opacity: 0, duration: 0.9, delay: 0.2 })
-        .from(".h-title-1",  { y: 60, opacity: 0, duration: 1   }, "-=0.5")
-        .from(".h-title-2",  { y: 60, opacity: 0, duration: 1   }, "-=0.75")
-        .from(".h-sub",      { y: 30, opacity: 0, duration: 0.8 }, "-=0.6")
-        .from(".h-actions",  { y: 24, opacity: 0, duration: 0.7 }, "-=0.5")
-        .from(".h-frame",    { scale: 0.9, opacity: 0, duration: 1.2, stagger: 0.12, ease: "power3.out" }, "-=0.7")
-        .from(".h-scroll-hint", { opacity: 0, duration: 0.6 }, "-=0.3");
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
 
-      // ── Gallery section ──
-      ScrollTrigger.create({
-        trigger: "#gallery",
-        start: "top 80%",
-        onEnter: () => {
-          gsap.from(".g-header", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" });
-          gsap.from(".gallery-item", { y: 60, opacity: 0, duration: 0.8, stagger: { amount: 0.6, from: "start" }, ease: "power3.out", delay: 0.2 });
-        },
-        once: true,
-      });
+      const mm = gsap.matchMedia();
 
-      // ── About ──
-      ScrollTrigger.create({
-        trigger: "#about",
-        start: "top 75%",
-        onEnter: () => {
-          gsap.from(".about-image",  { x: -60, opacity: 0, duration: 1.1, ease: "power3.out" });
-          gsap.from(".about-body",   { x:  60, opacity: 0, duration: 1.1, ease: "power3.out", delay: 0.15 });
-          gsap.from(".credential",   { y: 30, opacity: 0, duration: 0.7, stagger: 0.12, ease: "power2.out", delay: 0.5 });
-        },
-        once: true,
-      });
+      const addMagnetic = (selector: string, strength = 0.14) => {
+        if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
-      // ── Credential counter ──
-      ScrollTrigger.create({
-        trigger: ".about-credentials",
-        start: "top 80%",
-        onEnter: () => {
-          document.querySelectorAll(".credential-number").forEach(el => {
-            const text = el.textContent || "";
-            const num = parseFloat(text.replace(/[^0-9.]/g, ""));
-            const suffix = text.replace(/[0-9.]/g, "");
-            if (!isNaN(num)) {
-              gsap.fromTo(el, { textContent: "0" }, {
-                textContent: num, duration: 1.8, ease: "power2.out", snap: { textContent: num < 10 ? 0.1 : 1 },
-                onUpdate() { (el as HTMLElement).textContent = parseFloat((el as HTMLElement).textContent || "0").toFixed(num < 10 ? 1 : 0) + suffix; },
-              });
-            }
+        gsap.utils.toArray<HTMLElement>(selector).forEach((el) => {
+          const xTo = gsap.quickTo(el, "x", { duration: 0.45, ease: "power3.out" });
+          const yTo = gsap.quickTo(el, "y", { duration: 0.45, ease: "power3.out" });
+          const rTo = gsap.quickTo(el, "rotateZ", { duration: 0.5, ease: "power3.out" });
+
+          const enter = () => gsap.to(el, { scale: 1.02, duration: 0.45, ease: "power3.out" });
+          const move = (event: MouseEvent) => {
+            const rect = el.getBoundingClientRect();
+            const relX = event.clientX - rect.left - rect.width / 2;
+            const relY = event.clientY - rect.top - rect.height / 2;
+            xTo(relX * strength);
+            yTo(relY * strength);
+            rTo((relX / rect.width) * 4);
+          };
+          const leave = () => {
+            xTo(0);
+            yTo(0);
+            rTo(0);
+            gsap.to(el, { scale: 1, duration: 0.5, ease: "power3.out" });
+          };
+
+          el.addEventListener("mouseenter", enter);
+          el.addEventListener("mousemove", move);
+          el.addEventListener("mouseleave", leave);
+
+          magneticCleanups.push(() => {
+            el.removeEventListener("mouseenter", enter);
+            el.removeEventListener("mousemove", move);
+            el.removeEventListener("mouseleave", leave);
           });
-        },
-        once: true,
+        });
+      };
+
+      const revealHeaders = () => {
+        gsap.utils.toArray<HTMLElement>(".section-header").forEach((el) => {
+          gsap.fromTo(
+            el,
+            { y: 72, opacity: 0, filter: "blur(12px)", clipPath: "inset(0 0 100% 0)" },
+            {
+              y: 0,
+              opacity: 1,
+              filter: "blur(0px)",
+              clipPath: "inset(0 0 0% 0)",
+              duration: 1.1,
+              ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 84%", once: true },
+            }
+          );
+        });
+      };
+
+      const revealCards = (selector: string, options?: gsap.TweenVars) => {
+        gsap.utils.toArray<HTMLElement>(selector).forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            {
+              y: 56,
+              opacity: 0,
+              rotateX: 10,
+              rotateY: index % 2 === 0 ? -6 : 6,
+              transformPerspective: 1200,
+            },
+            {
+              y: 0,
+              opacity: 1,
+              rotateX: 0,
+              rotateY: 0,
+              duration: 0.95,
+              ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 88%", once: true },
+              ...options,
+            }
+          );
+        });
+      };
+
+      mm.add("(min-width: 901px)", () => {
+        addMagnetic(".magnetic", 0.12);
+        addMagnetic(".social-link", 0.08);
+        addMagnetic(".hero-frame", 0.04);
+
+        const intro = gsap.timeline({ defaults: { ease: "power4.out" } });
+        intro
+          .from(".hero-bg-element", { scale: 0.72, opacity: 0, stagger: 0.12, duration: 1.3 }, 0)
+          .from(".h-eyebrow", { yPercent: 120, opacity: 0, duration: 0.9 }, 0.12)
+          .from(".h-title-1, .h-title-2", { yPercent: 115, opacity: 0, stagger: 0.08, duration: 1.05 }, 0.18)
+          .from(".h-sub", { y: 32, opacity: 0, filter: "blur(10px)", duration: 0.9 }, 0.42)
+          .from(".h-actions > *", { y: 24, opacity: 0, stagger: 0.1, duration: 0.7 }, 0.58)
+          .from(".h-frame", { y: 80, opacity: 0, rotateX: 10, stagger: 0.1, duration: 1.1 }, 0.24)
+          .from(".h-scroll-hint", { opacity: 0, y: -12, duration: 0.6 }, 0.95);
+
+        gsap.to(".hero-text", {
+          yPercent: -14,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.1 },
+        });
+        gsap.to(".hero-gallery", {
+          yPercent: 12,
+          rotate: -2,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.2 },
+        });
+        gsap.to(".hero-frame-1", {
+          yPercent: -10,
+          rotate: -3,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.1 },
+        });
+        gsap.to(".hero-frame-2", {
+          yPercent: 10,
+          rotate: 6,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.3 },
+        });
+        gsap.to(".hero-frame-3", {
+          yPercent: -18,
+          rotate: -7,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.4 },
+        });
+        gsap.to(".hero-bg-1", {
+          xPercent: 10,
+          yPercent: -14,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.2 },
+        });
+        gsap.to(".hero-bg-2", {
+          xPercent: -12,
+          yPercent: 12,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.35 },
+        });
+        gsap.to(".hero-bg-3", {
+          xPercent: -6,
+          yPercent: -18,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.5 },
+        });
+
+        revealHeaders();
+        revealCards(".gallery-item");
+        revealCards(".commercial-card");
+        revealCards(".shop-card");
+
+        gsap.utils.toArray<HTMLElement>(".gallery-item").forEach((el, index) => {
+          const bg = el.querySelector<HTMLElement>(".gallery-item-bg");
+          if (!bg) return;
+          gsap.fromTo(
+            bg,
+            { scale: 1.14, y: 28 },
+            {
+              scale: 1,
+              y: -22,
+              ease: "none",
+              scrollTrigger: {
+                trigger: el,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1.1,
+              },
+            }
+          );
+          gsap.fromTo(
+            el,
+            { rotateZ: index % 2 === 0 ? -1.5 : 1.5 },
+            {
+              rotateZ: 0,
+              ease: "none",
+              scrollTrigger: {
+                trigger: el,
+                start: "top 92%",
+                end: "bottom 30%",
+                scrub: 1.2,
+              },
+            }
+          );
+        });
+
+        gsap.fromTo(
+          ".about-image",
+          { y: 90, opacity: 0, scale: 0.92, clipPath: "inset(10% 0 10% 0)" },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            clipPath: "inset(0% 0 0% 0)",
+            duration: 1.2,
+            ease: "power3.out",
+            scrollTrigger: { trigger: "#about", start: "top 74%", once: true },
+          }
+        );
+        gsap.fromTo(
+          ".about-body .section-eyebrow, .about-body h3, .about-body p, .credential",
+          { y: 38, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.9,
+            stagger: 0.08,
+            ease: "power3.out",
+            scrollTrigger: { trigger: "#about", start: "top 72%", once: true },
+          }
+        );
+
+        ScrollTrigger.create({
+          trigger: ".about-credentials",
+          start: "top 82%",
+          once: true,
+          onEnter: () => {
+            document.querySelectorAll(".credential-number").forEach((el) => {
+              const text = el.textContent || "";
+              const num = parseFloat(text.replace(/[^0-9.]/g, ""));
+              const suffix = text.replace(/[0-9.]/g, "");
+              if (!isNaN(num)) {
+                gsap.fromTo(el, { textContent: "0" }, {
+                  textContent: num,
+                  duration: 1.8,
+                  ease: "power2.out",
+                  snap: { textContent: num < 10 ? 0.1 : 1 },
+                  onUpdate() {
+                    (el as HTMLElement).textContent = parseFloat((el as HTMLElement).textContent || "0").toFixed(num < 10 ? 1 : 0) + suffix;
+                  },
+                });
+              }
+            });
+          },
+        });
+
+        gsap.fromTo(
+          ".quote-banner",
+          { clipPath: "inset(12% 0 12% 0 round 36px)", scale: 0.96 },
+          {
+            clipPath: "inset(0% 0 0% 0 round 0px)",
+            scale: 1,
+            duration: 1.1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".quote-banner", start: "top 85%", once: true },
+          }
+        );
+        gsap.to(".quote-text", {
+          y: -56,
+          ease: "none",
+          scrollTrigger: { trigger: ".quote-banner", start: "top bottom", end: "bottom top", scrub: 1.35 },
+        });
+
+        gsap.utils.toArray<HTMLElement>(".event-item").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            { x: index % 2 === 0 ? -70 : 70, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.9,
+              ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 88%", once: true },
+            }
+          );
+        });
+
+        gsap.fromTo(
+          ".nl-inner",
+          { y: 50, opacity: 0, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".newsletter", start: "top 86%", once: true },
+          }
+        );
+
+        gsap.fromTo(
+          ".contact-info",
+          { x: -70, opacity: 0, rotateY: -8, transformPerspective: 1200 },
+          {
+            x: 0,
+            opacity: 1,
+            rotateY: 0,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: "#contact", start: "top 80%", once: true },
+          }
+        );
+        gsap.fromTo(
+          ".contact-form",
+          { x: 70, opacity: 0, rotateY: 8, transformPerspective: 1200 },
+          {
+            x: 0,
+            opacity: 1,
+            rotateY: 0,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: "#contact", start: "top 80%", once: true },
+          }
+        );
+
+        return () => {
+          ScrollTrigger.refresh();
+        };
       });
 
-      // ── Commercial ──
-      ScrollTrigger.create({
-        trigger: "#commercial",
-        start: "top 80%",
-        onEnter: () => gsap.from(".commercial-card", { y: 40, opacity: 0, stagger: 0.08, duration: 0.7, ease: "power3.out" }),
-        once: true,
-      });
+      mm.add("(max-width: 900px)", () => {
+        const intro = gsap.timeline({ defaults: { ease: "power3.out" } });
+        intro
+          .from(".hero-bg-element", { scale: 0.8, opacity: 0, stagger: 0.1, duration: 0.9 }, 0)
+          .from(".h-eyebrow, .h-title-1, .h-title-2, .h-sub", { y: 34, opacity: 0, stagger: 0.08, duration: 0.75 }, 0.08)
+          .from(".h-actions > *", { y: 20, opacity: 0, stagger: 0.08, duration: 0.6 }, 0.32)
+          .from(".h-frame", { y: 44, opacity: 0, duration: 0.9 }, 0.2);
 
-      // ── Quote parallax ──
-      gsap.to(".quote-text", {
-        y: -40,
-        ease: "none",
-        scrollTrigger: { trigger: ".quote-banner", scrub: 1.5 },
-      });
+        gsap.to(".hero-bg-1", {
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.1 },
+        });
+        gsap.to(".hero-bg-2", {
+          yPercent: 8,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: 1.2 },
+        });
 
-      // ── Shop ──
-      ScrollTrigger.create({
-        trigger: "#shop",
-        start: "top 80%",
-        onEnter: () => gsap.from(".shop-card", { y: 50, opacity: 0, stagger: 0.1, duration: 0.8, ease: "power3.out" }),
-        once: true,
-      });
+        revealHeaders();
+        revealCards(".gallery-item", { duration: 0.75 });
+        revealCards(".commercial-card", { duration: 0.75 });
+        revealCards(".shop-card", { duration: 0.75 });
+        revealCards(".event-item", { duration: 0.75 });
+        revealCards(".credential", { duration: 0.7 });
 
-      // ── Events ──
-      ScrollTrigger.create({
-        trigger: "#community",
-        start: "top 80%",
-        onEnter: () => gsap.from(".event-item", { x: -40, opacity: 0, stagger: 0.12, duration: 0.8, ease: "power3.out" }),
-        once: true,
-      });
+        gsap.fromTo(
+          ".about-image",
+          { y: 40, opacity: 0, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.9,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".about-image", start: "top 88%", once: true },
+          }
+        );
 
-      // ── Newsletter ──
-      ScrollTrigger.create({
-        trigger: ".newsletter",
-        start: "top 85%",
-        onEnter: () => gsap.from(".nl-inner", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }),
-        once: true,
-      });
+        gsap.fromTo(
+          ".nl-inner, .contact-info, .contact-form",
+          { y: 34, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.85,
+            stagger: 0.12,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".newsletter", start: "top 88%", once: true },
+          }
+        );
 
-      // ── Contact ──
-      ScrollTrigger.create({
-        trigger: "#contact",
-        start: "top 80%",
-        onEnter: () => {
-          gsap.from(".contact-info", { x: -50, opacity: 0, duration: 1, ease: "power3.out" });
-          gsap.from(".contact-form", { x:  50, opacity: 0, duration: 1, ease: "power3.out", delay: 0.15 });
-        },
-        once: true,
-      });
-
-      // ── Section headers generic ──
-      gsap.utils.toArray<HTMLElement>(".reveal").forEach(el => {
-        gsap.from(el, {
-          y: 36, opacity: 0, duration: 0.9, ease: "power3.out",
-          scrollTrigger: { trigger: el, start: "top 88%", once: true },
+        gsap.to(".quote-text", {
+          y: -24,
+          ease: "none",
+          scrollTrigger: { trigger: ".quote-banner", start: "top bottom", end: "bottom top", scrub: 1 },
         });
       });
 
+      magneticCleanups.push(() => mm.revert());
     }, mainRef);
-    return () => ctx.revert();
+
+    return () => {
+      magneticCleanups.forEach((cleanup) => cleanup());
+      ctx.revert();
+    };
   }, []);
 
 
@@ -300,8 +566,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             </h1>
             <p className="hero-subtitle h-sub">{heroSubtitle}</p>
             <div className="hero-actions h-actions">
-              <a href="/gallery" className="btn-primary">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
-              <a href="#shop" className="btn-secondary">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
+              <a href="/gallery" className="btn-primary magnetic">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
+              <a href="#shop" className="btn-secondary magnetic">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
             </div>
           </div>
           <div className="hero-gallery">
@@ -352,7 +618,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           ))}
         </div>
         <div className="gallery-cta">
-          <a href="/gallery" className="btn-primary">{pc.homeGallery?.ctaText || "View Full Collection"}</a>
+          <a href="/gallery" className="btn-primary magnetic">{pc.homeGallery?.ctaText || "View Full Collection"}</a>
         </div>
       </section>
 
@@ -523,7 +789,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 { label:"SA", url:"#", platform:"Saatchi" },
                 { label:"FB", url:"#", platform:"Facebook" },
               ]).map((s, i) => (
-                <a key={i} href={s.url || "#"} className="social-link" aria-label={s.platform}>{s.label}</a>
+                <a key={i} href={s.url || "#"} className="social-link magnetic" aria-label={s.platform}>{s.label}</a>
               ))}
             </div>
           </div>
@@ -532,7 +798,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             <input type="email" placeholder="Email Address" aria-label="Email" />
             <input type="text"  placeholder="Subject — Commission, Purchase, Other" aria-label="Subject" />
             <textarea placeholder="Tell me about what you're looking for..." aria-label="Message" />
-            <button className="btn-primary" type="button">Send Message</button>
+            <button className="btn-primary magnetic" type="button">Send Message</button>
           </div>
         </div>
       </section>
