@@ -74,6 +74,12 @@ export default function AboutPage() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
+
+      const mm = gsap.matchMedia();
+
       // Hero lines stagger in
       gsap.from(".ah-line", {
         y: 100, opacity: 0, rotateX: -30,
@@ -134,6 +140,51 @@ export default function AboutPage() {
         scrollTrigger: { trigger: ".quote-reveal", start: "top 80%" },
       });
 
+      mm.add("(max-width: 900px)", () => {
+        gsap.to(".ah-line", {
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: { trigger: "section:first-of-type", start: "top top", end: "bottom top", scrub: 1 },
+        });
+
+        gsap.utils.toArray<HTMLElement>(".client-card").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            { y: 38, opacity: 0, scale: 0.96 },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.8,
+              ease: "power3.out",
+              delay: index * 0.02,
+              scrollTrigger: { trigger: el, start: "top 90%", once: true },
+            }
+          );
+        });
+
+        gsap.fromTo(
+          ".quote-reveal",
+          { y: 28, opacity: 0, clipPath: "inset(8% 0 8% 0 round 28px)" },
+          {
+            y: 0,
+            opacity: 1,
+            clipPath: "inset(0% 0 0% 0 round 0px)",
+            duration: 0.95,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".quote-reveal", start: "top 88%", once: true },
+          }
+        );
+      });
+
+      mm.add("(min-width: 901px)", () => {
+        gsap.to(".portrait-wrap", {
+          yPercent: -8,
+          ease: "none",
+          scrollTrigger: { trigger: ".story-grid", start: "top bottom", end: "bottom top", scrub: 1.2 },
+        });
+      });
+
     }, mainRef);
     return () => ctx.revert();
   }, []);
@@ -153,6 +204,8 @@ export default function AboutPage() {
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",border:"1px solid rgba(196,125,90,0.08)",top:"-10%",right:"-8%"}} />
         <div style={{position:"absolute",width:300,height:300,borderRadius:"50%",border:"1px solid rgba(139,154,126,0.1)",bottom:"10%",left:"-5%"}} />
         <div style={{position:"absolute",width:200,height:200,borderRadius:"50%",background:"rgba(196,168,110,0.06)",top:"30%",left:"15%",filter:"blur(60px)"}} />
+        <div style={{position:"absolute",width:"60vw",height:"60vw",maxWidth:520,maxHeight:520,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.44), transparent 68%)",top:"-10%",right:"-12%",filter:"blur(18px)",pointerEvents:"none"}} />
+        <div style={{position:"absolute",width:"58vw",height:"58vw",maxWidth:460,maxHeight:460,borderRadius:"50%",background:"radial-gradient(circle, rgba(196,125,90,0.14), transparent 72%)",bottom:"-15%",left:"-10%",filter:"blur(28px)",pointerEvents:"none"}} />
 
         <div style={{perspective:"600px",overflow:"hidden"}}>
           <div className="ah-line" style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C47D5A",marginBottom:24,display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
