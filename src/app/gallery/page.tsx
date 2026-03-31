@@ -189,7 +189,7 @@ export default function GalleryPage() {
                 Art <em style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:300,fontStyle:"italic",color:"#C47D5A"}}>Gallery</em>
               </h1>
               <p className="gh-sub" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1rem,2vw,1.15rem)",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",marginTop:12,maxWidth:500,lineHeight:1.7}}>
-                Original watercolors, acrylics, and mixed media — each piece carries emotion, story, and soul.
+                Original watercolors, acrylics, and mixed-media works shaped by observation, craft, and years of studio practice.
               </p>
             </div>
             <div className="gh-count" style={{display:"flex",alignItems:"baseline",gap:6,fontFamily:"'DM Serif Display',serif",color:"#F5F0E8",flexShrink:0}}>
@@ -356,7 +356,7 @@ export default function GalleryPage() {
               <p style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.85rem",color:"#B8AFA3",marginBottom:24}}>{selectedArt.displayMedium}</p>
               <div style={{width:40,height:1.5,background:"#C47D5A",marginBottom:24}} />
               <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.05rem",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",lineHeight:1.7,marginBottom:32}}>
-                {selectedArt.description || "Each piece is an expression of emotion — a method of communication, heart and soul on canvas."}
+                {selectedArt.description || "Each piece reflects careful observation, material study, and a personal studio practice developed over time."}
               </p>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
                 <span style={{fontFamily:"'DM Serif Display',serif",fontSize:"1.8rem",color:"#F5F0E8"}}>
