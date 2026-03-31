@@ -108,7 +108,7 @@ function MsgMenu({msg,onReply,onForward}:{msg:Msg;onReply:()=>void;onForward:()=
 
 export default function AdminInbox(){
   const isDesktop=useIsDesktop();
-  const[view,setView]=useState<View>("list");
+  const[view,setViewRaw]=useState<View>("list");
   const[folder,setFolder]=useState<Folder>("inbox");
   const[threads,setThreads]=useState<Thread[]>([]);
   const[fc,setFc]=useState<Record<string,number>>({});
@@ -126,6 +126,25 @@ export default function AdminInbox(){
   const[sidebar,setSidebar]=useState(false);
   const msgEnd=useRef<HTMLDivElement>(null);
   const showToast=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),3000);};
+
+  // ── History-aware navigation (Android back button support) ──
+  const setView=(v:View)=>{
+    if(v!=="list"){window.history.pushState({emailView:v},"");}
+    setViewRaw(v);
+  };
+  useEffect(()=>{
+    const onPop=(e:PopStateEvent)=>{
+      // If sidebar is open, close it instead of navigating
+      if(sidebar){setSidebar(false);window.history.pushState({emailView:view},"");return;}
+      // Navigate back through email views
+      if(view==="compose"){setViewRaw(sel?"thread":"list");return;}
+      if(view==="thread"){setViewRaw("list");setSel(null);return;}
+      // If on list view, let the browser handle it (goes back to admin)
+    };
+    window.addEventListener("popstate",onPop);
+    return()=>window.removeEventListener("popstate",onPop);
+  },[view,sel,sidebar]);
+
   const editor=useEditor({extensions:[StarterKit,Link.configure({openOnClick:false}),Underline,Placeholder.configure({placeholder:"Write your message..."})],content:""});
 
   const syncRef=useRef(false);
