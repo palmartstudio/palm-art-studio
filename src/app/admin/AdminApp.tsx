@@ -1048,6 +1048,34 @@ function Dashboard({ stats, onTab }: { stats: Stats; onTab: (t: Tab) => void }) 
           <QuickLink icon="🌐" label="Site Editor" tab="site-editor" accent={C.muted} />
         </div>
       </div>
+      {/* ── Big Neon Email Button ── */}
+      <button onClick={() => onTab("email")} style={{
+        width: "100%", padding: "22px 24px", marginBottom: 24, borderRadius: 18,
+        background: "linear-gradient(135deg, rgba(196,125,90,0.12), rgba(196,168,110,0.08))",
+        border: "1px solid rgba(196,125,90,0.25)", cursor: "pointer", fontFamily: "inherit",
+        display: "flex", alignItems: "center", gap: 16, position: "relative", overflow: "hidden",
+        boxShadow: "0 0 30px rgba(196,125,90,0.15), 0 0 60px rgba(196,125,90,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+        transition: "all 0.3s ease",
+      }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 26, background: "rgba(196,125,90,0.15)", boxShadow: "0 0 20px rgba(196,125,90,0.3)",
+          animation: "emailGlow 2s ease-in-out infinite alternate",
+        }}>✉️</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 2 }}>Email Inbox</div>
+          <div style={{ fontSize: 12, color: C.muted }}>Read, compose & manage emails</div>
+        </div>
+        <div style={{
+          fontSize: 22, color: C.terra, fontWeight: 300, opacity: 0.6,
+        }}>→</div>
+        {/* Animated glow border */}
+        <div style={{
+          position: "absolute", inset: -1, borderRadius: 18, pointerEvents: "none",
+          background: "linear-gradient(135deg, rgba(196,125,90,0.3), transparent, rgba(196,168,110,0.2))",
+          opacity: 0.4, animation: "emailGlow 2s ease-in-out infinite alternate",
+        }} />
+      </button>
       <div style={{ marginTop: 24, padding: "14px 20px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>palmartstudio.com</div>
@@ -1186,12 +1214,19 @@ export default function AdminApp() {
       }} id="mob-menu-btn">☰</button>
 
       <style>{`
+        @keyframes emailGlow {
+          0% { box-shadow: 0 0 15px rgba(196,125,90,0.2); opacity: 0.4; }
+          100% { box-shadow: 0 0 30px rgba(196,125,90,0.4), 0 0 60px rgba(196,125,90,0.1); opacity: 0.7; }
+        }
         @media (max-width: 860px) {
           #mob-menu-btn { display: block !important; }
           #admin-sidebar { transform: translateX(-100%); transition: transform 0.35s ease; }
           #admin-sidebar.open { transform: translateX(0); }
-          #admin-main { margin-left: 0 !important; }
+          #admin-main { margin-left: 0 !important; padding-top: env(safe-area-inset-top) !important; }
           #admin-main-inner { padding-top: 72px !important; }
+        }
+        @supports(padding-top: env(safe-area-inset-top)) {
+          #admin-sidebar { padding-top: env(safe-area-inset-top); }
         }
       `}</style>
 
