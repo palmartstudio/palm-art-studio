@@ -193,7 +193,7 @@ export default function AdminInbox(){
   // ═══ COMPOSE — Full Screen ═══
   if(view==="compose"&&!isDesktop){
     return(
-      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
           <button onClick={()=>setView(sel?"thread":"list")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:22}}>✕</button>
           <h2 style={{flex:1,fontSize:17,fontWeight:600,color:C.text,margin:0}}>{composeMode==="reply"?"Reply":composeMode==="forward"?"Forward":"Compose"}</h2>
@@ -223,7 +223,7 @@ export default function AdminInbox(){
   // ═══ THREAD — Full Screen, Edge-to-Edge Body ═══
   if(view==="thread"&&sel&&!isDesktop){
     return(
-      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 8px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
           <button onClick={()=>{setView("list");setSel(null);}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:22}}>←</button>
           <div style={{flex:1}}/>
@@ -286,7 +286,7 @@ export default function AdminInbox(){
   const SidebarPanel=()=>(
     <div onClick={()=>setSidebar(false)} style={{position:"fixed",inset:0,zIndex:60}}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
-      <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"82%",maxWidth:300,background:C.bg2,display:"flex",flexDirection:"column",animation:"slideIn .25s ease-out"}}>
+      <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"82%",maxWidth:300,background:C.bg2,display:"flex",flexDirection:"column",animation:"slideIn .25s ease-out",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{padding:"20px 20px 16px"}}><span style={{fontSize:20,fontWeight:700,color:C.terra,fontFamily:"'DM Serif Display',serif"}}>Palm Art Mail</span></div>
         <nav style={{flex:1,overflowY:"auto",padding:"0 8px"}}>
           {FOLDERS.map(f=>(
