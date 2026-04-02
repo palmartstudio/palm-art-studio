@@ -1124,16 +1124,25 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 export default function AdminApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [activeTab, setActiveTabRaw] = useState<Tab>("dashboard");
-  // ── History-aware tab navigation (Android back button) ──
-  const setActiveTab = (tab: Tab) => { if (tab !== "dashboard") { window.history.pushState({ adminTab: tab }, ""); } setActiveTabRaw(tab); };
+  // ── History-aware tab navigation (multi-level back) ──
+  const setActiveTab = (tab: Tab) => {
+    window.history.pushState({ adminTab: tab }, "");
+    setActiveTabRaw(tab);
+  };
   useEffect(() => {
-    const onPop = () => {
-      // Only handle back if NOT on email tab (email handles its own back flow)
-      if (activeTab !== "dashboard" && activeTab !== "email") { setActiveTabRaw("dashboard"); }
+    window.history.replaceState({ adminTab: "dashboard" }, "");
+  }, []);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      // If state has emailView, AdminInbox handles it — skip
+      if (e.state?.emailView) return;
+      // Read which tab to go to from the history state
+      const prevTab = e.state?.adminTab || "dashboard";
+      setActiveTabRaw(prevTab as Tab);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [activeTab]);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<Stats>({ artworkCount: 0, availableCount: 0, shopCount: 0, eventCount: 0 });
 
@@ -1214,7 +1223,7 @@ export default function AdminApp() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", height: 56 }}>
           {activeTab !== "dashboard" ? (
-            <button onClick={() => setActiveTab("dashboard")} style={{
+            <button onClick={() => window.history.back()} style={{
               background: "none", border: "none", cursor: "pointer", color: C.terra, fontSize: 20, padding: "6px 10px",
             }}>←</button>
           ) : (
