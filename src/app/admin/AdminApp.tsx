@@ -1206,12 +1206,32 @@ export default function AdminApp() {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
       `}</style>
 
-      {/* Mobile hamburger */}
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
-        display: "none", position: "fixed", top: 16, left: 16, zIndex: 300,
-        background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "10px 14px",
-        cursor: "pointer", color: C.terra, fontSize: 18,
-      }} id="mob-menu-btn">☰</button>
+      {/* Mobile header bar */}
+      <div id="mob-header" style={{
+        display: "none", position: "fixed", top: 0, left: 0, right: 0, zIndex: 300,
+        background: C.bg2, borderBottom: `1px solid ${C.border}`,
+        paddingTop: "env(safe-area-inset-top)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", height: 56 }}>
+          {activeTab !== "dashboard" ? (
+            <button onClick={() => setActiveTab("dashboard")} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.terra, fontSize: 20, padding: "6px 10px",
+            }}>←</button>
+          ) : (
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.terra, fontSize: 18, padding: "6px 10px",
+            }}>☰</button>
+          )}
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: C.text, fontFamily: "'DM Serif Display', serif" }}>
+            {activeTab === "dashboard" ? "Palm Art Studio" : activeTab === "site-editor" ? "Site Editor" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </span>
+          {activeTab !== "dashboard" && (
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 16, padding: "6px 10px",
+            }}>☰</button>
+          )}
+        </div>
+      </div>
 
       <style>{`
         @keyframes emailGlow {
@@ -1219,7 +1239,7 @@ export default function AdminApp() {
           100% { box-shadow: 0 0 30px rgba(196,125,90,0.4), 0 0 60px rgba(196,125,90,0.1); opacity: 0.7; }
         }
         @media (max-width: 860px) {
-          #mob-menu-btn { display: block !important; }
+          #mob-header { display: block !important; }
           #admin-sidebar { transform: translateX(-100%); transition: transform 0.35s ease; }
           #admin-sidebar.open { transform: translateX(0); }
           #admin-main { margin-left: 0 !important; padding-top: env(safe-area-inset-top) !important; }
