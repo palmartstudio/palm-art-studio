@@ -565,6 +565,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
   const navItems = [
     { href: "/gallery", label: "Gallery" },
+    { href: "/process", label: "Process" },
     { href: "/about",   label: "About" },
     { href: "#shop",    label: "Shop" },
     { href: "#community", label: "Events" },
@@ -872,6 +873,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           <div className="footer-logo">Palm Art Studio</div>
           <ul className="footer-links">
             <li><a href="/gallery">Gallery</a></li>
+            <li><a href="/process">Process</a></li>
             <li><a href="/about">About</a></li>
             <li><a href="#shop">Shop</a></li>
             <li><a href="#community">Events</a></li>
