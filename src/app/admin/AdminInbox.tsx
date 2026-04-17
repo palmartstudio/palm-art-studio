@@ -124,6 +124,10 @@ export default function AdminInbox(){
   const[composeMode,setComposeMode]=useState<"new"|"reply"|"forward"|null>(null);
   const[toast,setToast]=useState<string|null>(null);
   const[sidebar,setSidebar]=useState(false);
+  const[selectMode,setSelectMode]=useState(false);
+  const[selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
+  const longPressTimer=useRef<NodeJS.Timeout>();
+  const longPressTriggered=useRef(false);
   const msgEnd=useRef<HTMLDivElement>(null);
   const showToast=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),3000);};
 
@@ -177,10 +181,19 @@ export default function AdminInbox(){
   const handleSend=async()=>{if(!composeTo||!composeSubject)return;setSending(true);const html=editor?.getHTML()||"";const text=editor?.getText()||"";const isReply=composeMode==="reply"&&sel;const url=isReply?"/api/email/reply":"/api/email/compose";const payload=isReply?{thread_id:sel!.thread_id,to_email:composeTo,subject:composeSubject,reply_html:html,reply_body:text,from_email:FROM}:{to_email:composeTo,subject:composeSubject,body_html:html,body:text,cc_emails:composeCC?composeCC.split(",").map((s:string)=>s.trim()):[],from_email:FROM};const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});setSending(false);if(r.ok){showToast("Email sent!");setView("list");load();}else showToast("Failed to send");};
   const filtered=threads.filter(t=>!search||t.subject.toLowerCase().includes(search.toLowerCase())||t.to_email.toLowerCase().includes(search.toLowerCase())||t.from_email.toLowerCase().includes(search.toLowerCase()));
 
+  // ── Multi-select helpers ──
+  const enterSelect=(tid:string)=>{setSelectMode(true);setSelectedIds(new Set([tid]));};
+  const toggleSelect=(tid:string)=>{setSelectedIds(p=>{const n=new Set(p);n.has(tid)?n.delete(tid):n.add(tid);return n;});};
+  const exitSelect=()=>{setSelectMode(false);setSelectedIds(new Set());};
+  const batchAction=async(action:string)=>{const ids=Array.from(selectedIds);if(!ids.length)return;await fetch("/api/email/threads",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_ids:ids,action})});const m:Record<string,string>={trash:"Moved to trash",star:"Starred",unstar:"Unstarred",mark_read:"Marked read",mark_unread:"Marked unread",spam:"Moved to spam"};showToast(m[action]||"Done");exitSelect();load();};
+  const handlePointerDown=(tid:string)=>{longPressTriggered.current=false;longPressTimer.current=setTimeout(()=>{longPressTriggered.current=true;enterSelect(tid);},500);};
+  const handlePointerUp=()=>{clearTimeout(longPressTimer.current);};
+  const handleThreadClick=(t:Thread)=>{if(longPressTriggered.current){longPressTriggered.current=false;return;}if(selectMode){toggleSelect(t.thread_id);}else{openThread(t);}};
+
   // ═══ COMPOSE — Full Screen ═══
   if(view==="compose"&&!isDesktop){
     return(
-      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
           <button onClick={()=>setView(sel?"thread":"list")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:22}}>✕</button>
           <h2 style={{flex:1,fontSize:17,fontWeight:600,color:C.text,margin:0}}>{composeMode==="reply"?"Reply":composeMode==="forward"?"Forward":"Compose"}</h2>
@@ -210,7 +223,7 @@ export default function AdminInbox(){
   // ═══ THREAD — Full Screen, Edge-to-Edge Body ═══
   if(view==="thread"&&sel&&!isDesktop){
     return(
-      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{position:"fixed",inset:0,zIndex:60,background:C.bg,display:"flex",flexDirection:"column",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 8px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
           <button onClick={()=>{setView("list");setSel(null);}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:22}}>←</button>
           <div style={{flex:1}}/>
@@ -273,7 +286,7 @@ export default function AdminInbox(){
   const SidebarPanel=()=>(
     <div onClick={()=>setSidebar(false)} style={{position:"fixed",inset:0,zIndex:60}}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
-      <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"82%",maxWidth:300,background:C.bg2,display:"flex",flexDirection:"column",animation:"slideIn .25s ease-out"}}>
+      <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,left:0,bottom:0,width:"82%",maxWidth:300,background:C.bg2,display:"flex",flexDirection:"column",animation:"slideIn .25s ease-out",paddingTop:"env(safe-area-inset-top)"}}>
         <div style={{padding:"20px 20px 16px"}}><span style={{fontSize:20,fontWeight:700,color:C.terra,fontFamily:"'DM Serif Display',serif"}}>Palm Art Mail</span></div>
         <nav style={{flex:1,overflowY:"auto",padding:"0 8px"}}>
           {FOLDERS.map(f=>(
@@ -409,22 +422,37 @@ export default function AdminInbox(){
     <div style={{height:"100%",display:"flex",flexDirection:"column",background:C.bg,position:"relative"}}>
       {sidebar&&<SidebarPanel/>}
       {toast&&<div style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:9999,padding:"10px 20px",background:C.bg3,border:`1px solid rgba(196,125,90,0.3)`,borderRadius:20,color:C.terra,fontSize:15}}>{toast}</div>}
-      {/* Top bar */}
+
+      {/* Batch action bar — shown in select mode */}
+      {selectMode?(<div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderBottom:`1px solid ${C.border}`,background:C.bg2}}>
+        <button onClick={exitSelect} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:6,fontSize:20}}>✕</button>
+        <span style={{fontSize:16,fontWeight:600,color:C.text}}>{selectedIds.size} selected</span>
+        <button onClick={()=>{selectedIds.size===filtered.length?setSelectedIds(new Set()):setSelectedIds(new Set(filtered.map(t=>t.thread_id)));}} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.border2}`,background:"none",color:C.dim,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{selectedIds.size===filtered.length?"None":"All"}</button>
+        <div style={{flex:1}}/>
+        <button onClick={()=>batchAction("mark_read")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:16}} title="Mark read">📖</button>
+        <button onClick={()=>batchAction("mark_unread")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:16}} title="Mark unread">📩</button>
+        <button onClick={()=>batchAction("star")} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:16}} title="Star">⭐</button>
+        <button onClick={()=>batchAction("trash")} style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",padding:8,fontSize:16}} title="Delete">🗑️</button>
+      </div>):(
+      /* Top bar */
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
         <button onClick={()=>setSidebar(true)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,padding:8,fontSize:22}}>☰</button>
         <div style={{flex:1,display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:C.bg3,borderRadius:24,border:`1px solid ${C.border}`}}>
           <span style={{color:C.dim,fontSize:16}}>🔍</span>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search in mail" style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:15,color:C.text,fontFamily:"inherit"}}/>
         </div>
-      </div>
-      <div style={{padding:"4px 20px 8px"}}><span style={{fontSize:15,fontWeight:500,color:C.dim,textTransform:"capitalize"}}>{folder}</span></div>
+      </div>)}
+      {!selectMode&&<div style={{padding:"4px 20px 8px"}}><span style={{fontSize:15,fontWeight:500,color:C.dim,textTransform:"capitalize"}}>{folder}</span></div>}
       {/* Thread list */}
       <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch" as any}}>
         {loading?<div style={{textAlign:"center",padding:60,color:C.muted}}>Syncing emails...</div>
         :filtered.length===0?<div style={{textAlign:"center",padding:60,color:C.dim}}><div style={{fontSize:44,opacity:0.1,marginBottom:12}}>✉️</div><p style={{fontSize:16}}>No emails in {folder}</p></div>
-        :filtered.map(t=>{const name=(folder==="sent"?t.to_email:t.from_email).split("@")[0];return(
-          <button key={t.thread_id} onClick={()=>openThread(t)} style={{width:"100%",display:"flex",alignItems:"flex-start",gap:12,padding:"14px 20px",border:"none",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:t.unread_count>0?"rgba(196,125,90,0.015)":"transparent",fontFamily:"inherit",textAlign:"left"}}>
-            <div style={{width:44,height:44,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0,background:avatarColor(folder==="sent"?t.to_email:t.from_email)+"25",color:avatarColor(folder==="sent"?t.to_email:t.from_email)}}>{(name[0]||"?").toUpperCase()}</div>
+        :filtered.map(t=>{const sEmail=folder==="sent"?t.to_email:t.from_email;const name=sEmail.split("@")[0];const isSel=selectedIds.has(t.thread_id);return(
+          <button key={t.thread_id} onPointerDown={()=>handlePointerDown(t.thread_id)} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onContextMenu={e=>{e.preventDefault();if(!selectMode)enterSelect(t.thread_id);}} onClick={()=>handleThreadClick(t)} style={{width:"100%",display:"flex",alignItems:"flex-start",gap:12,padding:"14px 20px",border:"none",borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:isSel?"rgba(196,125,90,0.08)":t.unread_count>0?"rgba(196,125,90,0.015)":"transparent",fontFamily:"inherit",textAlign:"left"}}>
+            {/* Avatar — tap to toggle select in select mode */}
+            <div onClick={e=>{e.stopPropagation();if(selectMode){toggleSelect(t.thread_id);}else{enterSelect(t.thread_id);}}} style={{width:44,height:44,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0,transition:"all 0.15s",...(isSel?{border:`2px solid ${C.terra}`,background:"rgba(196,125,90,0.2)"}:selectMode?{border:"2px solid rgba(255,255,255,0.15)",background:"transparent"}:{background:avatarColor(sEmail)+"25",color:avatarColor(sEmail)})}}>
+              {isSel?"✓":selectMode?" ":(name[0]||"?").toUpperCase()}
+            </div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:16,fontWeight:t.unread_count>0?700:500,color:t.unread_count>0?C.text:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
@@ -435,11 +463,11 @@ export default function AdminInbox(){
               <p style={{fontSize:15,fontWeight:t.unread_count>0?600:400,color:t.unread_count>0?C.text:"rgba(255,255,255,0.4)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.subject}</p>
               <p style={{fontSize:14,color:"rgba(255,255,255,0.2)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.latest_body_preview}</p>
             </div>
-            {t.starred&&<span style={{fontSize:16,marginTop:4,flexShrink:0}}>⭐</span>}
+            {!selectMode&&t.starred&&<span style={{fontSize:16,marginTop:4,flexShrink:0}}>⭐</span>}
           </button>);
         })}
       </div>
-      <button onClick={()=>startCompose("new")} style={{position:"fixed",bottom:80,right:20,zIndex:30,display:"flex",alignItems:"center",gap:8,padding:"16px 24px",background:C.bg3,border:`1px solid rgba(196,125,90,0.2)`,borderRadius:16,color:C.terra,fontSize:15,fontWeight:700,fontFamily:"inherit",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",marginBottom:"env(safe-area-inset-bottom)"}}>✏️ Compose</button>
+      {!selectMode&&<button onClick={()=>startCompose("new")} style={{position:"fixed",bottom:80,right:20,zIndex:30,display:"flex",alignItems:"center",gap:8,padding:"16px 24px",background:C.bg3,border:`1px solid rgba(196,125,90,0.2)`,borderRadius:16,color:C.terra,fontSize:15,fontWeight:700,fontFamily:"inherit",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",marginBottom:"env(safe-area-inset-bottom)"}}>✏️ Compose</button>}
       <style>{`.ProseMirror{outline:none;min-height:120px;} .ProseMirror p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:${C.dim};pointer-events:none;height:0;}`}</style>
     </div>
   );

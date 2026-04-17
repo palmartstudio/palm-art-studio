@@ -12,7 +12,7 @@ interface Event { _id:string; title:string; date:string; location?:string; rsvpU
 interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
 interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?:string; email?:string; quote?:string; portrait?:any; credentials?:{number:string;label:string}[]; commercialClients?:{name:string;description:string}[]; socialLinks?:{platform:string;url:string;label:string}[]; }
 
-interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
+interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeQuoteBanner?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
 interface Props { settings:Settings|null; artist:Artist|null; artwork:Artwork[]; shopItems:ShopItem[]; events:Event[]; portraitUrl:string|null; pageContent:PageContent|null; heroImages:(string|null)[]; }
 
 function preferUpdatedCopy(value: string | undefined, legacy: string, updated: string) {
@@ -117,120 +117,449 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
   // GSAP animations
   useEffect(() => {
+    const magneticCleanups: Array<() => void> = [];
+
     const ctx = gsap.context(() => {
-      // ── Hero entrance ──
-      const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
-      tl.from(".h-eyebrow",  { y: 30, opacity: 0, duration: 0.9, delay: 0.2 })
-        .from(".h-title-1",  { y: 60, opacity: 0, duration: 1   }, "-=0.5")
-        .from(".h-title-2",  { y: 60, opacity: 0, duration: 1   }, "-=0.75")
-        .from(".h-sub",      { y: 30, opacity: 0, duration: 0.8 }, "-=0.6")
-        .from(".h-actions",  { y: 24, opacity: 0, duration: 0.7 }, "-=0.5")
-        .from(".h-frame",    { scale: 0.9, opacity: 0, duration: 1.2, stagger: 0.12, ease: "power3.out" }, "-=0.7")
-        .from(".h-scroll-hint", { opacity: 0, duration: 0.6 }, "-=0.3");
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
 
-      // ── Gallery section ──
-      ScrollTrigger.create({
-        trigger: "#gallery",
-        start: "top 80%",
-        onEnter: () => {
-          gsap.from(".g-header", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" });
-          gsap.from(".gallery-item", { y: 60, opacity: 0, duration: 0.8, stagger: { amount: 0.6, from: "start" }, ease: "power3.out", delay: 0.2 });
-        },
-        once: true,
-      });
+      const mm = gsap.matchMedia();
 
-      // ── About ──
-      ScrollTrigger.create({
-        trigger: "#about",
-        start: "top 75%",
-        onEnter: () => {
-          gsap.from(".about-image",  { x: -60, opacity: 0, duration: 1.1, ease: "power3.out" });
-          gsap.from(".about-body",   { x:  60, opacity: 0, duration: 1.1, ease: "power3.out", delay: 0.15 });
-          gsap.from(".credential",   { y: 30, opacity: 0, duration: 0.7, stagger: 0.12, ease: "power2.out", delay: 0.5 });
-        },
-        once: true,
-      });
+      const addMagnetic = (selector: string, strength = 0.14) => {
+        if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
-      // ── Credential counter ──
-      ScrollTrigger.create({
-        trigger: ".about-credentials",
-        start: "top 80%",
-        onEnter: () => {
-          document.querySelectorAll(".credential-number").forEach(el => {
-            const text = el.textContent || "";
-            const num = parseFloat(text.replace(/[^0-9.]/g, ""));
-            const suffix = text.replace(/[0-9.]/g, "");
-            if (!isNaN(num)) {
-              gsap.fromTo(el, { textContent: "0" }, {
-                textContent: num, duration: 1.8, ease: "power2.out", snap: { textContent: num < 10 ? 0.1 : 1 },
-                onUpdate() { (el as HTMLElement).textContent = parseFloat((el as HTMLElement).textContent || "0").toFixed(num < 10 ? 1 : 0) + suffix; },
-              });
-            }
+        gsap.utils.toArray<HTMLElement>(selector).forEach((el) => {
+          const xTo = gsap.quickTo(el, "x", { duration: 0.45, ease: "power3.out" });
+          const yTo = gsap.quickTo(el, "y", { duration: 0.45, ease: "power3.out" });
+          const rTo = gsap.quickTo(el, "rotateZ", { duration: 0.5, ease: "power3.out" });
+
+          const enter = () => gsap.to(el, { scale: 1.02, duration: 0.45, ease: "power3.out" });
+          const move = (event: MouseEvent) => {
+            const rect = el.getBoundingClientRect();
+            const relX = event.clientX - rect.left - rect.width / 2;
+            const relY = event.clientY - rect.top - rect.height / 2;
+            xTo(relX * strength);
+            yTo(relY * strength);
+            rTo((relX / rect.width) * 4);
+          };
+          const leave = () => {
+            xTo(0);
+            yTo(0);
+            rTo(0);
+            gsap.to(el, { scale: 1, duration: 0.5, ease: "power3.out" });
+          };
+
+          el.addEventListener("mouseenter", enter);
+          el.addEventListener("mousemove", move);
+          el.addEventListener("mouseleave", leave);
+
+          magneticCleanups.push(() => {
+            el.removeEventListener("mouseenter", enter);
+            el.removeEventListener("mousemove", move);
+            el.removeEventListener("mouseleave", leave);
           });
-        },
-        once: true,
-      });
-
-      // ── Commercial ──
-      ScrollTrigger.create({
-        trigger: "#commercial",
-        start: "top 80%",
-        onEnter: () => gsap.from(".commercial-card", { y: 40, opacity: 0, stagger: 0.08, duration: 0.7, ease: "power3.out" }),
-        once: true,
-      });
-
-      // ── Quote parallax ──
-      gsap.to(".quote-text", {
-        y: -40,
-        ease: "none",
-        scrollTrigger: { trigger: ".quote-banner", scrub: 1.5 },
-      });
-
-      // ── Shop ──
-      ScrollTrigger.create({
-        trigger: "#shop",
-        start: "top 80%",
-        onEnter: () => gsap.from(".shop-card", { y: 50, opacity: 0, stagger: 0.1, duration: 0.8, ease: "power3.out" }),
-        once: true,
-      });
-
-      // ── Events ──
-      ScrollTrigger.create({
-        trigger: "#community",
-        start: "top 80%",
-        onEnter: () => gsap.from(".event-item", { x: -40, opacity: 0, stagger: 0.12, duration: 0.8, ease: "power3.out" }),
-        once: true,
-      });
-
-      // ── Newsletter ──
-      ScrollTrigger.create({
-        trigger: ".newsletter",
-        start: "top 85%",
-        onEnter: () => gsap.from(".nl-inner", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }),
-        once: true,
-      });
-
-      // ── Contact ──
-      ScrollTrigger.create({
-        trigger: "#contact",
-        start: "top 80%",
-        onEnter: () => {
-          gsap.from(".contact-info", { x: -50, opacity: 0, duration: 1, ease: "power3.out" });
-          gsap.from(".contact-form", { x:  50, opacity: 0, duration: 1, ease: "power3.out", delay: 0.15 });
-        },
-        once: true,
-      });
-
-      // ── Section headers generic ──
-      gsap.utils.toArray<HTMLElement>(".reveal").forEach(el => {
-        gsap.from(el, {
-          y: 36, opacity: 0, duration: 0.9, ease: "power3.out",
-          scrollTrigger: { trigger: el, start: "top 88%", once: true },
         });
+      };
+
+      const revealHeaders = () => {
+        gsap.utils.toArray<HTMLElement>(".section-header").forEach((el) => {
+          gsap.fromTo(
+            el,
+            { y: 40, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.9,
+              ease: "power2.out",
+              scrollTrigger: { trigger: el, start: "top 86%", once: true },
+            }
+          );
+        });
+      };
+
+      const revealCards = (selector: string, options?: gsap.TweenVars) => {
+        gsap.utils.toArray<HTMLElement>(selector).forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            { y: 32, opacity: 0, scale: 0.97 },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.75,
+              delay: index * 0.06,
+              ease: "power2.out",
+              scrollTrigger: { trigger: el, start: "top 90%", once: true },
+              ...options,
+            }
+          );
+        });
+      };
+
+      mm.add("(min-width: 901px)", () => {
+        addMagnetic(".magnetic", 0.12);
+        addMagnetic(".social-link", 0.08);
+        addMagnetic(".hero-frame", 0.04);
+
+        const intro = gsap.timeline({ defaults: { ease: "power4.out" } });
+        intro
+          .fromTo(".hero-bg-element", { scale: 0.72, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.12, duration: 1.3 }, 0)
+          .fromTo(".h-eyebrow", { yPercent: 120, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.9 }, 0.12)
+          .fromTo(".h-title-1, .h-title-2", { yPercent: 115, opacity: 0 }, { yPercent: 0, opacity: 1, stagger: 0.08, duration: 1.05 }, 0.18)
+          .fromTo(".h-sub", { y: 32, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.42)
+          .fromTo(".h-actions > *", { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.7 }, 0.58)
+          .fromTo(".h-frame", { y: 80, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 1.1 }, 0.24)
+          .fromTo(".h-scroll-hint", { opacity: 0, y: -12 }, { opacity: 0.5, y: 0, duration: 0.6 }, 0.95);
+
+        gsap.to(".hero-text", {
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-gallery", {
+          yPercent: 8,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-frame-1", {
+          yPercent: -6,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-frame-2", {
+          yPercent: 6,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-frame-3", {
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-bg-1", {
+          xPercent: 6,
+          yPercent: -8,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-bg-2", {
+          xPercent: -8,
+          yPercent: 6,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-bg-3", {
+          xPercent: -4,
+          yPercent: -10,
+          ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+
+        revealHeaders();
+        revealCards(".gallery-item");
+        revealCards(".commercial-card");
+        revealCards(".shop-card");
+
+        gsap.utils.toArray<HTMLElement>(".gallery-item").forEach((el) => {
+          const bg = el.querySelector<HTMLElement>(".gallery-item-bg");
+          if (!bg) return;
+          gsap.fromTo(
+            bg,
+            { scale: 1.08 },
+            {
+              scale: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: el,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: true,
+              },
+            }
+          );
+        });
+
+        gsap.fromTo(
+          ".about-image",
+          { y: 40, opacity: 0, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.9,
+            ease: "power2.out",
+            scrollTrigger: { trigger: "#about", start: "top 76%", once: true },
+          }
+        );
+        gsap.fromTo(
+          ".about-body .section-eyebrow, .about-body h3, .about-body p, .credential",
+          { y: 38, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.9,
+            stagger: 0.08,
+            ease: "power3.out",
+            scrollTrigger: { trigger: "#about", start: "top 72%", once: true },
+          }
+        );
+
+        ScrollTrigger.create({
+          trigger: ".about-credentials",
+          start: "top 82%",
+          once: true,
+          onEnter: () => {
+            document.querySelectorAll(".credential-number").forEach((el) => {
+              const text = el.textContent || "";
+              const num = parseFloat(text.replace(/[^0-9.]/g, ""));
+              const suffix = text.replace(/[0-9.]/g, "");
+              if (!isNaN(num)) {
+                gsap.fromTo(el, { textContent: "0" }, {
+                  textContent: num,
+                  duration: 1.8,
+                  ease: "power2.out",
+                  snap: { textContent: num < 10 ? 0.1 : 1 },
+                  onUpdate() {
+                    (el as HTMLElement).textContent = parseFloat((el as HTMLElement).textContent || "0").toFixed(num < 10 ? 1 : 0) + suffix;
+                  },
+                });
+              }
+            });
+          },
+        });
+
+        gsap.fromTo(
+          ".quote-banner",
+          { scale: 0.97, opacity: 0.7 },
+          {
+            scale: 1,
+            opacity: 1,
+            duration: 0.9,
+            ease: "power2.out",
+            scrollTrigger: { trigger: ".quote-banner", start: "top 85%", once: true },
+          }
+        );
+        gsap.to(".quote-text", {
+          y: -30,
+          ease: "none",
+          scrollTrigger: { trigger: ".quote-banner", start: "top bottom", end: "bottom top", scrub: true },
+        });
+
+        gsap.utils.toArray<HTMLElement>(".event-item").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            { y: 24, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.6,
+              delay: index * 0.08,
+              ease: "power2.out",
+              scrollTrigger: { trigger: el, start: "top 90%", once: true },
+            }
+          );
+        });
+
+        gsap.fromTo(
+          ".nl-inner",
+          { y: 50, opacity: 0, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: ".newsletter", start: "top 86%", once: true },
+          }
+        );
+
+        gsap.fromTo(
+          ".contact-info",
+          { x: -40, opacity: 0 },
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: "power2.out",
+            scrollTrigger: { trigger: "#contact", start: "top 80%", once: true },
+          }
+        );
+        gsap.fromTo(
+          ".contact-form",
+          { x: 40, opacity: 0 },
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: "power2.out",
+            scrollTrigger: { trigger: "#contact", start: "top 80%", once: true },
+          }
+        );
+
+        return () => {
+          ScrollTrigger.refresh();
+        };
       });
 
+      mm.add("(max-width: 900px)", () => {
+        // ═══ MOBILE: Cinematic scroll animations ═══
+        // GPU-accelerated transforms only: translate, scale, opacity
+
+        // ── Hero Intro: Dramatic staggered reveal ──
+        const hero = gsap.timeline({ defaults: { ease: "power3.out" } });
+        hero
+          .fromTo(".hero-bg-element", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.15, duration: 1.4 }, 0)
+          .fromTo(".h-eyebrow", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 0.2)
+          .fromTo(".h-title-1", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0 }, 0.3)
+          .fromTo(".h-title-2", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.0 }, 0.45)
+          .fromTo(".h-sub", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 0.7)
+          .fromTo(".h-actions > *", { y: 40, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, stagger: 0.12, duration: 0.8 }, 0.85)
+          .fromTo(".h-frame", { y: 80, opacity: 0, scale: 0.85 }, { y: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power4.out" }, 0.4);
+
+        // Hero parallax — subtle depth on scroll
+        gsap.to(".hero-bg-1", {
+          yPercent: -15, ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+        gsap.to(".hero-bg-2", {
+          yPercent: 10, ease: "none",
+          scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true },
+        });
+
+        // ── Section Headers: Slide up with weight ──
+        gsap.utils.toArray<HTMLElement>(".section-header").forEach((el) => {
+          gsap.fromTo(el,
+            { y: 60, opacity: 0 },
+            { y: 0, opacity: 1, duration: 1.0, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 85%", once: true }
+            }
+          );
+        });
+
+        // ── Gallery Cards: Dramatic staggered entrance ──
+        gsap.utils.toArray<HTMLElement>(".gallery-item").forEach((el, i) => {
+          gsap.fromTo(el,
+            { y: 80, opacity: 0, scale: 0.88 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.9, delay: i * 0.1, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 92%", once: true }
+            }
+          );
+        });
+
+        // ── About Section: Portrait + text cascade ──
+        gsap.fromTo(".about-image",
+          { x: -60, opacity: 0, scale: 0.9 },
+          { x: 0, opacity: 1, scale: 1, duration: 1.0, ease: "power3.out",
+            scrollTrigger: { trigger: "#about", start: "top 82%", once: true }
+          }
+        );
+        gsap.fromTo(".about-body .section-eyebrow, .about-body h3, .about-body p",
+          { y: 50, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, stagger: 0.12, ease: "power3.out",
+            scrollTrigger: { trigger: "#about", start: "top 78%", once: true }
+          }
+        );
+
+        // ── Credentials: Count up + reveal ──
+        gsap.utils.toArray<HTMLElement>(".credential").forEach((el, i) => {
+          gsap.fromTo(el,
+            { y: 40, opacity: 0, scale: 0.85 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.7, delay: i * 0.15, ease: "back.out(1.4)",
+              scrollTrigger: { trigger: el, start: "top 90%", once: true }
+            }
+          );
+        });
+        ScrollTrigger.create({
+          trigger: ".about-credentials", start: "top 85%", once: true,
+          onEnter: () => {
+            document.querySelectorAll(".credential-number").forEach((el) => {
+              const text = el.textContent || "";
+              const num = parseFloat(text.replace(/[^0-9.]/g, ""));
+              const suffix = text.replace(/[0-9.]/g, "");
+              if (!isNaN(num)) {
+                gsap.fromTo(el, { textContent: "0" }, {
+                  textContent: num, duration: 2.0, ease: "power2.out",
+                  snap: { textContent: num < 10 ? 0.1 : 1 },
+                  onUpdate() { (el as HTMLElement).textContent = parseFloat((el as HTMLElement).textContent || "0").toFixed(num < 10 ? 1 : 0) + suffix; },
+                });
+              }
+            });
+          },
+        });
+
+        // ── Commercial Cards: Staggered wave ──
+        gsap.utils.toArray<HTMLElement>(".commercial-card").forEach((el, i) => {
+          gsap.fromTo(el,
+            { y: 50, opacity: 0, scale: 0.9 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.7, delay: i * 0.06, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 92%", once: true }
+            }
+          );
+        });
+
+        // ── Quote Banner: Scale reveal with parallax text ──
+        gsap.fromTo(".quote-banner",
+          { scale: 0.92, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 1.2, ease: "power3.out",
+            scrollTrigger: { trigger: ".quote-banner", start: "top 88%", once: true }
+          }
+        );
+        gsap.to(".quote-text", {
+          y: -30, ease: "none",
+          scrollTrigger: { trigger: ".quote-banner", start: "top bottom", end: "bottom top", scrub: true },
+        });
+
+        // ── Shop Cards: Bold entrance ──
+        gsap.utils.toArray<HTMLElement>(".shop-card").forEach((el, i) => {
+          gsap.fromTo(el,
+            { y: 70, opacity: 0, scale: 0.88 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.9, delay: i * 0.1, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 92%", once: true }
+            }
+          );
+        });
+
+        // ── Event Items: Slide in from left with spring ──
+        gsap.utils.toArray<HTMLElement>(".event-item").forEach((el, i) => {
+          gsap.fromTo(el,
+            { x: -60, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.8, delay: i * 0.1, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 90%", once: true }
+            }
+          );
+        });
+
+        // ── Newsletter: Rise up with glow ──
+        gsap.fromTo(".nl-inner",
+          { y: 60, opacity: 0, scale: 0.95 },
+          { y: 0, opacity: 1, scale: 1, duration: 1.0, ease: "power3.out",
+            scrollTrigger: { trigger: ".newsletter", start: "top 85%", once: true }
+          }
+        );
+
+        // ── Contact: Staggered columns ──
+        gsap.fromTo(".contact-info",
+          { x: -50, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.9, ease: "power3.out",
+            scrollTrigger: { trigger: "#contact", start: "top 82%", once: true }
+          }
+        );
+        gsap.fromTo(".contact-form",
+          { x: 50, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.9, ease: "power3.out",
+            scrollTrigger: { trigger: "#contact", start: "top 80%", once: true }
+          }
+        );
+      });
+
+      magneticCleanups.push(() => mm.revert());
     }, mainRef);
-    return () => ctx.revert();
+
+    return () => {
+      magneticCleanups.forEach((cleanup) => cleanup());
+      ctx.revert();
+    };
   }, []);
 
 
@@ -300,8 +629,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             </h1>
             <p className="hero-subtitle h-sub">{heroSubtitle}</p>
             <div className="hero-actions h-actions">
-              <a href="/gallery" className="btn-primary">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
-              <a href="#shop" className="btn-secondary">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
+              <a href="/gallery" className="btn-primary magnetic">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
+              <a href="#shop" className="btn-secondary magnetic">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
             </div>
           </div>
           <div className="hero-gallery">
@@ -352,7 +681,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           ))}
         </div>
         <div className="gallery-cta">
-          <a href="/gallery" className="btn-primary">{pc.homeGallery?.ctaText || "View Full Collection"}</a>
+          <a href="/gallery" className="btn-primary magnetic">{pc.homeGallery?.ctaText || "View Full Collection"}</a>
         </div>
       </section>
 
@@ -523,7 +852,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 { label:"SA", url:"#", platform:"Saatchi" },
                 { label:"FB", url:"#", platform:"Facebook" },
               ]).map((s, i) => (
-                <a key={i} href={s.url || "#"} className="social-link" aria-label={s.platform}>{s.label}</a>
+                <a key={i} href={s.url || "#"} className="social-link magnetic" aria-label={s.platform}>{s.label}</a>
               ))}
             </div>
           </div>
@@ -532,7 +861,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             <input type="email" placeholder="Email Address" aria-label="Email" />
             <input type="text"  placeholder="Subject — Commission, Purchase, Other" aria-label="Subject" />
             <textarea placeholder="Tell me about what you're looking for..." aria-label="Message" />
-            <button className="btn-primary" type="button">Send Message</button>
+            <button className="btn-primary magnetic" type="button">Send Message</button>
           </div>
         </div>
       </section>
@@ -554,6 +883,10 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
       <style>{`
         @keyframes scrollPulse { 0%,100%{opacity:.4;transform:scaleY(1)} 50%{opacity:1;transform:scaleY(1.15)} }
+        @keyframes heroSafety { to { opacity: 1 !important; transform: none !important; } }
+        .h-eyebrow, .h-title-1, .h-title-2, .h-sub, .h-actions > *, .h-frame {
+          animation: heroSafety 0.01s 2.5s forwards;
+        }
         @media(max-width:900px){
           .h-scroll-hint{display:none}
           .hero-frame-2,.hero-frame-3{display:none}

@@ -111,6 +111,8 @@ function TimelineEditor({ steps, onChange }: {
   onChange: (next: TimelineStepForm[]) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const getLatestStepsRef = useRef<TimelineStepForm[]>(steps);
+  useEffect(() => { getLatestStepsRef.current = steps; }, [steps]);
 
   const uploadImage = async (file: File, tempKey: string) => {
     try {
@@ -119,46 +121,26 @@ function TimelineEditor({ steps, onChange }: {
       const { token, dataset, apiVersion } = await configRes.json();
       const asset = await new Promise<{ _id: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open(
-          "POST",
-          `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`
-        );
+        xhr.open("POST", `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`);
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
             const pct = Math.round((e.loaded / e.total) * 100);
-            onChange(
-              getLatestStepsRef.current.map((s) =>
-                s._key === tempKey ? { ...s, _uploadProgress: pct } : s
-              )
-            );
+            onChange(getLatestStepsRef.current.map((s) => s._key === tempKey ? { ...s, _uploadProgress: pct } : s));
           }
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText).document);
-            } catch {
-              reject(new Error("bad response"));
-            }
+            try { resolve(JSON.parse(xhr.responseText).document); } catch { reject(new Error("bad response")); }
           } else reject(new Error(`upload ${xhr.status}`));
         };
         xhr.onerror = () => reject(new Error("net"));
         xhr.send(file);
       });
       return asset._id;
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
+    } catch (e) { console.error(e); return null; }
   };
-
-  // keep a live ref so the progress updater sees the current list
-  const getLatestStepsRef = useRef<TimelineStepForm[]>(steps);
-  useEffect(() => {
-    getLatestStepsRef.current = steps;
-  }, [steps]);
 
   const handleAdd = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -169,36 +151,20 @@ function TimelineEditor({ steps, onChange }: {
       r.onload = (e) => resolve((e.target?.result as string) || "");
       r.readAsDataURL(file);
     });
-    const draft: TimelineStepForm = {
-      _key: tempKey,
-      stage: "",
-      caption: "",
-      capturedAt: "",
-      imageUrl: localPreview,
-      _uploading: true,
-      _uploadProgress: 0,
-    };
-    const next = [...getLatestStepsRef.current, draft];
-    onChange(next);
+    const draft: TimelineStepForm = { _key: tempKey, stage: "", caption: "", capturedAt: "", imageUrl: localPreview, _uploading: true, _uploadProgress: 0 };
+    onChange([...getLatestStepsRef.current, draft]);
     const assetId = await uploadImage(file, tempKey);
-    onChange(
-      getLatestStepsRef.current.map((s) =>
-        s._key === tempKey
-          ? assetId
-            ? { ...s, imageAssetId: assetId, _uploading: false, _uploadProgress: 100 }
-            : { ...s, _uploading: false, _uploadProgress: 0 }
-          : s
-      )
-    );
+    onChange(getLatestStepsRef.current.map((s) =>
+      s._key === tempKey
+        ? assetId
+          ? { ...s, imageAssetId: assetId, _uploading: false, _uploadProgress: 100 }
+          : { ...s, _uploading: false, _uploadProgress: 0 }
+        : s
+    ));
   };
 
-  const update = (key: string, patch: Partial<TimelineStepForm>) => {
-    onChange(steps.map((s) => (s._key === key ? { ...s, ...patch } : s)));
-  };
-  const remove = (key: string) => {
-    if (!confirm("Remove this step?")) return;
-    onChange(steps.filter((s) => s._key !== key));
-  };
+  const update = (key: string, patch: Partial<TimelineStepForm>) => { onChange(steps.map((s) => (s._key === key ? { ...s, ...patch } : s))); };
+  const remove = (key: string) => { if (!confirm("Remove this step?")) return; onChange(steps.filter((s) => s._key !== key)); };
   const move = (key: string, dir: -1 | 1) => {
     const idx = steps.findIndex((s) => s._key === key);
     if (idx < 0) return;
@@ -211,230 +177,53 @@ function TimelineEditor({ steps, onChange }: {
 
   return (
     <div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          handleAdd(e.target.files);
-          e.target.value = "";
-        }}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={(e) => { handleAdd(e.target.files); e.target.value = ""; }} />
       {steps.length === 0 && (
-        <div
-          style={{
-            border: `2px dashed ${C.border2}`,
-            borderRadius: 12,
-            padding: 24,
-            textAlign: "center",
-            color: C.muted,
-            fontSize: 12,
-            marginBottom: 12,
-          }}
-        >
+        <div style={{ border: `2px dashed ${C.border2}`, borderRadius: 12, padding: 24, textAlign: "center", color: C.muted, fontSize: 12, marginBottom: 12 }}>
           No timeline steps yet. Add progress photos below.
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
         {steps.map((s, i) => (
-          <div
-            key={s._key}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto 1fr auto",
-              gap: 12,
-              alignItems: "flex-start",
-              padding: 12,
-              background: C.bg3,
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                width: 96,
-                height: 120,
-                background: C.bg,
-                borderRadius: 8,
-                overflow: "hidden",
-                position: "relative",
-                flexShrink: 0,
-              }}
-            >
+          <div key={s._key} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "flex-start", padding: 12, background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 10, position: "relative" }}>
+            <div style={{ width: 96, height: 120, background: C.bg, borderRadius: 8, overflow: "hidden", position: "relative", flexShrink: 0 }}>
               {s.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={s.imageUrl}
-                  alt=""
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
+                <img src={s.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               )}
               {s._uploading && (
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(10,9,6,0.6)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                  }}
-                >
+                <div style={{ position: "absolute", inset: 0, background: "rgba(10,9,6,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <div style={{ color: C.text, fontSize: 11 }}>{s._uploadProgress || 0}%</div>
-                  <div
-                    style={{
-                      width: "70%",
-                      height: 3,
-                      background: C.bg2,
-                      borderRadius: 3,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${s._uploadProgress || 0}%`,
-                        height: "100%",
-                        background: C.terra,
-                        transition: "width 0.2s",
-                      }}
-                    />
+                  <div style={{ width: "70%", height: 3, background: C.bg2, borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: `${s._uploadProgress || 0}%`, height: "100%", background: C.terra, transition: "width 0.2s" }} />
                   </div>
                 </div>
               )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <select
-                value={s.stage || ""}
-                onChange={(e) => update(s._key, { stage: e.target.value })}
-                style={{
-                  padding: "8px 10px",
-                  background: C.bg2,
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: C.text,
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                  outline: "none",
-                }}
-              >
-                {STAGE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
+              <select value={s.stage || ""} onChange={(e) => update(s._key, { stage: e.target.value })}
+                style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }}>
+                {STAGE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
-              <input
-                type="date"
-                value={s.capturedAt || ""}
-                onChange={(e) => update(s._key, { capturedAt: e.target.value })}
-                style={{
-                  padding: "8px 10px",
-                  background: C.bg2,
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: C.text,
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                  outline: "none",
-                }}
-              />
-              <textarea
-                value={s.caption || ""}
-                onChange={(e) => update(s._key, { caption: e.target.value })}
-                placeholder="Caption (optional)"
-                rows={2}
-                style={{
-                  gridColumn: "1 / -1",
-                  padding: "8px 10px",
-                  background: C.bg2,
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: C.text,
-                  fontFamily: "inherit",
-                  fontSize: 12,
-                  outline: "none",
-                  resize: "vertical",
-                }}
-              />
+              <input type="date" value={s.capturedAt || ""} onChange={(e) => update(s._key, { capturedAt: e.target.value })}
+                style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }} />
+              <textarea value={s.caption || ""} onChange={(e) => update(s._key, { caption: e.target.value })} placeholder="Caption (optional)" rows={2}
+                style={{ gridColumn: "1 / -1", padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none", resize: "vertical" }} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <button
-                type="button"
-                onClick={() => move(s._key, -1)}
-                disabled={i === 0}
-                title="Move up"
-                style={{
-                  background: "none",
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: C.muted,
-                  cursor: i === 0 ? "not-allowed" : "pointer",
-                  fontSize: 12,
-                  padding: "4px 8px",
-                  opacity: i === 0 ? 0.4 : 1,
-                }}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                onClick={() => move(s._key, 1)}
-                disabled={i === steps.length - 1}
-                title="Move down"
-                style={{
-                  background: "none",
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: C.muted,
-                  cursor: i === steps.length - 1 ? "not-allowed" : "pointer",
-                  fontSize: 12,
-                  padding: "4px 8px",
-                  opacity: i === steps.length - 1 ? 0.4 : 1,
-                }}
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => remove(s._key)}
-                title="Remove step"
-                style={{
-                  background: "none",
-                  border: `1px solid ${C.border2}`,
-                  borderRadius: 6,
-                  color: "#d97b6a",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  padding: "4px 8px",
-                }}
-              >
-                ×
-              </button>
+              <button type="button" onClick={() => move(s._key, -1)} disabled={i === 0} title="Move up"
+                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === 0 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === 0 ? 0.4 : 1 }}>↑</button>
+              <button type="button" onClick={() => move(s._key, 1)} disabled={i === steps.length - 1} title="Move down"
+                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === steps.length - 1 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === steps.length - 1 ? 0.4 : 1 }}>↓</button>
+              <button type="button" onClick={() => remove(s._key)} title="Remove step"
+                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: "#d97b6a", cursor: "pointer", fontSize: 12, padding: "4px 8px" }}>×</button>
             </div>
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 16px",
-          border: `1px dashed ${C.border2}`,
-          background: "transparent",
-          color: C.muted,
-          borderRadius: 8,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          fontSize: 12,
-        }}
-      >
+      <button type="button" onClick={() => fileInputRef.current?.click()}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: `1px dashed ${C.border2}`, background: "transparent", color: C.muted, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
         + Add Step
       </button>
     </div>
