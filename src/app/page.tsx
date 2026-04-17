@@ -1,6 +1,12 @@
 import { createClient } from "next-sanity";
 import imageUrlBuilder from "@sanity/image-url";
 import HomeClient from "./HomeClient";
+import {
+  JsonLdScript,
+  artistPerson,
+  studioOrganization,
+  websiteSchema,
+} from "../components/StructuredData";
 
 export const dynamic = "force-dynamic";
 
@@ -43,5 +49,12 @@ async function getData() {
 
 export default async function Home() {
   const data = await getData();
-  return <HomeClient {...data} />;
+  return (
+    <>
+      <JsonLdScript id="ld-website" data={websiteSchema} />
+      <JsonLdScript id="ld-person" data={artistPerson} />
+      <JsonLdScript id="ld-studio" data={studioOrganization} />
+      <HomeClient {...data} />
+    </>
+  );
 }

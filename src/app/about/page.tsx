@@ -211,8 +211,10 @@ export default function AboutPage() {
           <div className="ah-line" style={{fontFamily:"'Outfit',sans-serif",fontSize:"0.72rem",fontWeight:500,letterSpacing:"0.2em",textTransform:"uppercase",color:"#C47D5A",marginBottom:24,display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
             <span style={{width:32,height:1.5,background:"#C47D5A",display:"inline-block"}} /> {pc.aboutHero?.eyebrow || "Artist & Designer"}
           </div>
-          <h1 className="ah-line" style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(3.5rem,8vw,7rem)",fontWeight:400,lineHeight:1,color:"#2A2520",margin:0}}>Carolyn</h1>
-          <h1 className="ah-line" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(3.5rem,8vw,7rem)",fontWeight:300,fontStyle:"italic",lineHeight:1,color:"#C47D5A",margin:"0 0 28px"}}>Jenkins</h1>
+          <h1 className="ah-line" style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(3.5rem,8vw,7rem)",fontWeight:400,lineHeight:1,color:"#2A2520",margin:0}}>
+            Carolyn{" "}
+            <span style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:300,fontStyle:"italic",color:"#C47D5A",display:"inline-block"}}>Jenkins</span>
+          </h1>
         </div>
         <p className="ah-sub" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1.1rem,2vw,1.4rem)",fontWeight:300,fontStyle:"italic",color:"#3D3530",opacity:0.7,maxWidth:500,lineHeight:1.7,margin:"0 auto 48px"}}>
           {aboutHeroSubtitle}
