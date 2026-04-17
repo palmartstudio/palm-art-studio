@@ -23,11 +23,13 @@ export const metadata: Metadata = {
     description: DESC,
     url: `${SITE_URL}/process`,
     type: "website",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESC,
+    images: ["/opengraph-image"],
   },
 };
 
