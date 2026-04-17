@@ -15,6 +15,77 @@ export default defineType({
       of: [{ type: "image", options: { hotspot: true } }],
     }),
     defineField({
+      name: "processTimeline",
+      title: "Creation Timeline",
+      description: "Progress photos showing this piece being created. Shown on the artwork detail lightbox and on the Process page.",
+      type: "array",
+      of: [
+        {
+          type: "object",
+          name: "timelineStep",
+          title: "Timeline Step",
+          fields: [
+            defineField({
+              name: "image",
+              title: "Progress Photo",
+              type: "image",
+              options: { hotspot: true },
+              validation: (r) => r.required(),
+            }),
+            defineField({
+              name: "stage",
+              title: "Stage",
+              type: "string",
+              options: {
+                list: [
+                  { title: "Blank Canvas / Reference", value: "blank" },
+                  { title: "Underpainting / Sketch", value: "underpainting" },
+                  { title: "Early Progress", value: "early" },
+                  { title: "Mid Progress", value: "mid" },
+                  { title: "Late Progress", value: "late" },
+                  { title: "Finished Piece", value: "finished" },
+                  { title: "Detail Shot", value: "detail" },
+                  { title: "In Studio", value: "studio" },
+                  { title: "Other", value: "other" },
+                ],
+                layout: "dropdown",
+              },
+            }),
+            defineField({
+              name: "caption",
+              title: "Caption",
+              type: "text",
+              rows: 2,
+              description: "Optional note about this stage.",
+            }),
+            defineField({
+              name: "capturedAt",
+              title: "Photo Date",
+              type: "date",
+              options: { dateFormat: "YYYY-MM-DD" },
+            }),
+          ],
+          preview: {
+            select: { media: "image", title: "stage", subtitle: "caption" },
+            prepare({ media, title, subtitle }) {
+              const stageLabels: Record<string, string> = {
+                blank: "Blank Canvas",
+                underpainting: "Underpainting",
+                early: "Early",
+                mid: "Mid Progress",
+                late: "Late",
+                finished: "Finished",
+                detail: "Detail",
+                studio: "In Studio",
+                other: "Other",
+              };
+              return { media, title: stageLabels[title as string] || title || "Step", subtitle };
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
       name: "medium",
       title: "Medium",
       type: "string",

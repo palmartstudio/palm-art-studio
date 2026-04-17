@@ -8,6 +8,7 @@ interface NavProps {
 
 const NAV_ITEMS = [
   { href: "/gallery",    label: "Gallery" },
+  { href: "/process",    label: "Process" },
   { href: "/about",      label: "About" },
   { href: "/#shop",      label: "Shop" },
   { href: "/#community", label: "Events" },

@@ -9,11 +9,36 @@ type Tab = "dashboard" | "gallery" | "shop" | "events" | "email" | "site-editor"
 type EditorPage = "homepage" | "about" | "gallery" | "global";
 
 // ─── Types ───
+interface TimelineStepForm {
+  _key: string;
+  stage?: string;
+  caption?: string;
+  capturedAt?: string;
+  imageUrl?: string;
+  imageLqip?: string;
+  imageAssetId?: string;
+  image?: { _type?: string; asset?: { _type?: string; _ref?: string } };
+  _uploading?: boolean;
+  _uploadProgress?: number;
+}
 interface Artwork {
   _id: string; title: string; medium?: string; dimensions?: string; price?: number;
   status?: string; category?: string; year?: number; featured?: boolean;
   description?: string; imageUrl?: string; image?: { asset: { _ref: string } }; slug?: { current: string };
+  processTimeline?: TimelineStepForm[];
 }
+const STAGE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "— Stage —" },
+  { value: "blank", label: "Blank Canvas / Reference" },
+  { value: "underpainting", label: "Underpainting / Sketch" },
+  { value: "early", label: "Early Progress" },
+  { value: "mid", label: "Mid Progress" },
+  { value: "late", label: "Late Progress" },
+  { value: "finished", label: "Finished Piece" },
+  { value: "detail", label: "Detail Shot" },
+  { value: "studio", label: "In Studio" },
+  { value: "other", label: "Other" },
+];
 interface Event { _id: string; title: string; date: string; location?: string; type?: string; rsvpUrl?: string; description?: string; }
 interface ShopItem { _id: string; title: string; price: number; badge?: string; type?: string; inStock?: boolean; medium?: string; imageUrl?: string; }
 interface Stats { artworkCount: number; availableCount: number; shopCount: number; eventCount: number; }
@@ -80,6 +105,342 @@ function UploadZone({ onFile, uploading, progress }: { onFile: (f: File) => void
   );
 }
 
+// ─── Timeline Editor (inside ArtworkModal) ───
+function TimelineEditor({ steps, onChange }: {
+  steps: TimelineStepForm[];
+  onChange: (next: TimelineStepForm[]) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImage = async (file: File, tempKey: string) => {
+    try {
+      const configRes = await fetch("/api/admin/upload-config");
+      if (!configRes.ok) throw new Error("upload-config failed");
+      const { token, dataset, apiVersion } = await configRes.json();
+      const asset = await new Promise<{ _id: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open(
+          "POST",
+          `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`
+        );
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            onChange(
+              getLatestStepsRef.current.map((s) =>
+                s._key === tempKey ? { ...s, _uploadProgress: pct } : s
+              )
+            );
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText).document);
+            } catch {
+              reject(new Error("bad response"));
+            }
+          } else reject(new Error(`upload ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error("net"));
+        xhr.send(file);
+      });
+      return asset._id;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  // keep a live ref so the progress updater sees the current list
+  const getLatestStepsRef = useRef<TimelineStepForm[]>(steps);
+  useEffect(() => {
+    getLatestStepsRef.current = steps;
+  }, [steps]);
+
+  const handleAdd = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const tempKey = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const localPreview = await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = (e) => resolve((e.target?.result as string) || "");
+      r.readAsDataURL(file);
+    });
+    const draft: TimelineStepForm = {
+      _key: tempKey,
+      stage: "",
+      caption: "",
+      capturedAt: "",
+      imageUrl: localPreview,
+      _uploading: true,
+      _uploadProgress: 0,
+    };
+    const next = [...getLatestStepsRef.current, draft];
+    onChange(next);
+    const assetId = await uploadImage(file, tempKey);
+    onChange(
+      getLatestStepsRef.current.map((s) =>
+        s._key === tempKey
+          ? assetId
+            ? { ...s, imageAssetId: assetId, _uploading: false, _uploadProgress: 100 }
+            : { ...s, _uploading: false, _uploadProgress: 0 }
+          : s
+      )
+    );
+  };
+
+  const update = (key: string, patch: Partial<TimelineStepForm>) => {
+    onChange(steps.map((s) => (s._key === key ? { ...s, ...patch } : s)));
+  };
+  const remove = (key: string) => {
+    if (!confirm("Remove this step?")) return;
+    onChange(steps.filter((s) => s._key !== key));
+  };
+  const move = (key: string, dir: -1 | 1) => {
+    const idx = steps.findIndex((s) => s._key === key);
+    if (idx < 0) return;
+    const next = [...steps];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          handleAdd(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      {steps.length === 0 && (
+        <div
+          style={{
+            border: `2px dashed ${C.border2}`,
+            borderRadius: 12,
+            padding: 24,
+            textAlign: "center",
+            color: C.muted,
+            fontSize: 12,
+            marginBottom: 12,
+          }}
+        >
+          No timeline steps yet. Add progress photos below.
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+        {steps.map((s, i) => (
+          <div
+            key={s._key}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto 1fr auto",
+              gap: 12,
+              alignItems: "flex-start",
+              padding: 12,
+              background: C.bg3,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: 96,
+                height: 120,
+                background: C.bg,
+                borderRadius: 8,
+                overflow: "hidden",
+                position: "relative",
+                flexShrink: 0,
+              }}
+            >
+              {s.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s.imageUrl}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              )}
+              {s._uploading && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "rgba(10,9,6,0.6)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ color: C.text, fontSize: 11 }}>{s._uploadProgress || 0}%</div>
+                  <div
+                    style={{
+                      width: "70%",
+                      height: 3,
+                      background: C.bg2,
+                      borderRadius: 3,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${s._uploadProgress || 0}%`,
+                        height: "100%",
+                        background: C.terra,
+                        transition: "width 0.2s",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <select
+                value={s.stage || ""}
+                onChange={(e) => update(s._key, { stage: e.target.value })}
+                style={{
+                  padding: "8px 10px",
+                  background: C.bg2,
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: C.text,
+                  fontFamily: "inherit",
+                  fontSize: 12,
+                  outline: "none",
+                }}
+              >
+                {STAGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={s.capturedAt || ""}
+                onChange={(e) => update(s._key, { capturedAt: e.target.value })}
+                style={{
+                  padding: "8px 10px",
+                  background: C.bg2,
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: C.text,
+                  fontFamily: "inherit",
+                  fontSize: 12,
+                  outline: "none",
+                }}
+              />
+              <textarea
+                value={s.caption || ""}
+                onChange={(e) => update(s._key, { caption: e.target.value })}
+                placeholder="Caption (optional)"
+                rows={2}
+                style={{
+                  gridColumn: "1 / -1",
+                  padding: "8px 10px",
+                  background: C.bg2,
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: C.text,
+                  fontFamily: "inherit",
+                  fontSize: 12,
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <button
+                type="button"
+                onClick={() => move(s._key, -1)}
+                disabled={i === 0}
+                title="Move up"
+                style={{
+                  background: "none",
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: C.muted,
+                  cursor: i === 0 ? "not-allowed" : "pointer",
+                  fontSize: 12,
+                  padding: "4px 8px",
+                  opacity: i === 0 ? 0.4 : 1,
+                }}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => move(s._key, 1)}
+                disabled={i === steps.length - 1}
+                title="Move down"
+                style={{
+                  background: "none",
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: C.muted,
+                  cursor: i === steps.length - 1 ? "not-allowed" : "pointer",
+                  fontSize: 12,
+                  padding: "4px 8px",
+                  opacity: i === steps.length - 1 ? 0.4 : 1,
+                }}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => remove(s._key)}
+                title="Remove step"
+                style={{
+                  background: "none",
+                  border: `1px solid ${C.border2}`,
+                  borderRadius: 6,
+                  color: "#d97b6a",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  padding: "4px 8px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 16px",
+          border: `1px dashed ${C.border2}`,
+          background: "transparent",
+          color: C.muted,
+          borderRadius: 8,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: 12,
+        }}
+      >
+        + Add Step
+      </button>
+    </div>
+  );
+}
+
 // ─── Artwork Edit Modal ───
 function ArtworkModal({ artwork, onClose, onSave }: {
   artwork: Partial<Artwork> | null; onClose: () => void;
@@ -135,6 +496,16 @@ function ArtworkModal({ artwork, onClose, onSave }: {
           {imagePreview && <div style={{ marginBottom: 12, borderRadius: 10, overflow: "hidden", maxHeight: 200 }}><img src={imagePreview} alt="" style={{ width: "100%", height: 200, objectFit: "cover" }} /></div>}
           <UploadZone onFile={handleImage} uploading={false} progress={0} />
         </div>
+        <div style={{ marginBottom: 20, borderTop: `1px solid ${C.border2}`, paddingTop: 20 }}>
+          <label style={labelStyle}>Creation Timeline</label>
+          <p style={{ fontSize: 11, color: C.muted, margin: "0 0 12px" }}>
+            Optional. Add progress photos showing this piece being created. Use arrows to reorder.
+          </p>
+          <TimelineEditor
+            steps={(form.processTimeline as TimelineStepForm[]) || []}
+            onChange={(next) => set("processTimeline", next)}
+          />
+        </div>
         <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{ padding: "10px 24px", background: "none", border: `1px solid ${C.border2}`, borderRadius: 8, color: C.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Cancel</button>
           <button onClick={handleSave} disabled={saving} style={{ padding: "10px 28px", background: C.terra, border: "none", borderRadius: 8, color: "#fff", cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1 }}>{saving ? "Saving..." : isNew ? "Add Artwork" : "Save Changes"}</button>
@@ -179,7 +550,19 @@ function GalleryManager() {
       imageAssetId = assetData._id;
     }
     const isNew = !(modal as Artwork)?._id;
-    const payload = { ...data, ...(imageAssetId ? { imageAssetId } : {}) };
+    const cleanedTimeline = Array.isArray(data.processTimeline)
+      ? data.processTimeline
+          .filter((s: TimelineStepForm) => !s._uploading && (s.imageAssetId || s.image))
+          .map((s: TimelineStepForm) => {
+            const { imageUrl, imageLqip, _uploading, _uploadProgress, ...rest } = s;
+            return rest;
+          })
+      : undefined;
+    const payload = {
+      ...data,
+      ...(imageAssetId ? { imageAssetId } : {}),
+      ...(cleanedTimeline !== undefined ? { processTimeline: cleanedTimeline } : {}),
+    };
     const r = await fetch("/api/admin/artwork", { method: isNew ? "POST" : "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (r.ok) { showToast(isNew ? "Artwork added!" : "Artwork updated!"); setModal(null); load(); }
     else { const err = await r.json().catch(() => ({})); throw new Error(err.error || "Save failed"); }
@@ -1048,6 +1431,34 @@ function Dashboard({ stats, onTab }: { stats: Stats; onTab: (t: Tab) => void }) 
           <QuickLink icon="🌐" label="Site Editor" tab="site-editor" accent={C.muted} />
         </div>
       </div>
+      {/* ── Big Neon Email Button ── */}
+      <button onClick={() => onTab("email")} style={{
+        width: "100%", padding: "22px 24px", marginBottom: 24, borderRadius: 18,
+        background: "linear-gradient(135deg, rgba(196,125,90,0.12), rgba(196,168,110,0.08))",
+        border: "1px solid rgba(196,125,90,0.25)", cursor: "pointer", fontFamily: "inherit",
+        display: "flex", alignItems: "center", gap: 16, position: "relative", overflow: "hidden",
+        boxShadow: "0 0 30px rgba(196,125,90,0.15), 0 0 60px rgba(196,125,90,0.05), inset 0 1px 0 rgba(255,255,255,0.05)",
+        transition: "all 0.3s ease",
+      }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 26, background: "rgba(196,125,90,0.15)", boxShadow: "0 0 20px rgba(196,125,90,0.3)",
+          animation: "emailGlow 2s ease-in-out infinite alternate",
+        }}>✉️</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 2 }}>Email Inbox</div>
+          <div style={{ fontSize: 12, color: C.muted }}>Read, compose & manage emails</div>
+        </div>
+        <div style={{
+          fontSize: 22, color: C.terra, fontWeight: 300, opacity: 0.6,
+        }}>→</div>
+        {/* Animated glow border */}
+        <div style={{
+          position: "absolute", inset: -1, borderRadius: 18, pointerEvents: "none",
+          background: "linear-gradient(135deg, rgba(196,125,90,0.3), transparent, rgba(196,168,110,0.2))",
+          opacity: 0.4, animation: "emailGlow 2s ease-in-out infinite alternate",
+        }} />
+      </button>
       <div style={{ marginTop: 24, padding: "14px 20px", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>palmartstudio.com</div>
@@ -1095,7 +1506,26 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ═══════════════════════════════════════
 export default function AdminApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTabRaw] = useState<Tab>("dashboard");
+  // ── History-aware tab navigation (multi-level back) ──
+  const setActiveTab = (tab: Tab) => {
+    window.history.pushState({ adminTab: tab }, "");
+    setActiveTabRaw(tab);
+  };
+  useEffect(() => {
+    window.history.replaceState({ adminTab: "dashboard" }, "");
+  }, []);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      // If state has emailView, AdminInbox handles it — skip
+      if (e.state?.emailView) return;
+      // Read which tab to go to from the history state
+      const prevTab = e.state?.adminTab || "dashboard";
+      setActiveTabRaw(prevTab as Tab);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<Stats>({ artworkCount: 0, availableCount: 0, shopCount: 0, eventCount: 0 });
 
@@ -1168,20 +1598,47 @@ export default function AdminApp() {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
       `}</style>
 
-      {/* Mobile hamburger */}
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
-        display: "none", position: "fixed", top: 16, left: 16, zIndex: 300,
-        background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "10px 14px",
-        cursor: "pointer", color: C.terra, fontSize: 18,
-      }} id="mob-menu-btn">☰</button>
+      {/* Mobile header bar */}
+      <div id="mob-header" style={{
+        display: "none", position: "fixed", top: 0, left: 0, right: 0, zIndex: 300,
+        background: C.bg2, borderBottom: `1px solid ${C.border}`,
+        paddingTop: "env(safe-area-inset-top)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", height: 56 }}>
+          {activeTab !== "dashboard" ? (
+            <button onClick={() => window.history.back()} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.terra, fontSize: 20, padding: "6px 10px",
+            }}>←</button>
+          ) : (
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.terra, fontSize: 18, padding: "6px 10px",
+            }}>☰</button>
+          )}
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: C.text, fontFamily: "'DM Serif Display', serif" }}>
+            {activeTab === "dashboard" ? "Palm Art Studio" : activeTab === "site-editor" ? "Site Editor" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </span>
+          {activeTab !== "dashboard" && (
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+              background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 16, padding: "6px 10px",
+            }}>☰</button>
+          )}
+        </div>
+      </div>
 
       <style>{`
+        @keyframes emailGlow {
+          0% { box-shadow: 0 0 15px rgba(196,125,90,0.2); opacity: 0.4; }
+          100% { box-shadow: 0 0 30px rgba(196,125,90,0.4), 0 0 60px rgba(196,125,90,0.1); opacity: 0.7; }
+        }
         @media (max-width: 860px) {
-          #mob-menu-btn { display: block !important; }
+          #mob-header { display: block !important; }
           #admin-sidebar { transform: translateX(-100%); transition: transform 0.35s ease; }
           #admin-sidebar.open { transform: translateX(0); }
-          #admin-main { margin-left: 0 !important; }
+          #admin-main { margin-left: 0 !important; padding-top: env(safe-area-inset-top) !important; }
           #admin-main-inner { padding-top: 72px !important; }
+        }
+        @supports(padding-top: env(safe-area-inset-top)) {
+          #admin-sidebar { padding-top: env(safe-area-inset-top); }
         }
       `}</style>
 

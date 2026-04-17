@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import NavClient from "../../components/NavClient";
+import TimelineViewer, { TimelineStep } from "../../components/TimelineViewer";
+import { viewTransitionName } from "../../lib/viewTransitions";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -41,6 +43,7 @@ function displayCategory(medium: string, category: string): string {
 // ─── Types ───
 interface Artwork {
   _id: string;
+  slug?: string;
   title: string;
   medium: string;
   dimensions?: string;
@@ -51,6 +54,8 @@ interface Artwork {
   featured?: boolean;
   description?: string;
   imageUrl?: string;
+  imageLqip?: string;
+  processTimeline?: TimelineStep[];
   // derived display fields
   displayCategory: string;
   displayMedium: string;
@@ -98,6 +103,7 @@ export default function GalleryPage() {
       if (Array.isArray(data) && data.length > 0) {
         const mapped: Artwork[] = data.map((item: any) => ({
           _id: item._id,
+          slug: item.slug?.current,
           title: item.title,
           medium: item.medium || "other",
           dimensions: item.dimensions,
@@ -108,6 +114,10 @@ export default function GalleryPage() {
           featured: item.featured,
           description: item.description,
           imageUrl: item.imageUrl,
+          imageLqip: item.imageLqip,
+          processTimeline: Array.isArray(item.processTimeline)
+            ? item.processTimeline.filter((t: any) => t?.imageUrl)
+            : [],
           displayCategory: displayCategory(item.medium || "other", item.category || "fine-art"),
           displayMedium: displayMedium(item.medium || "other", item.dimensions),
           color: MEDIUM_COLORS[item.medium] || "#8B6F5C",
@@ -132,7 +142,7 @@ export default function GalleryPage() {
 
   // ─── Hero + filter bar entrance ───
   useEffect(() => {
-    if (loading) return;
+    if (loading || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
     tl.from(".gh-line",    { y: 80, opacity: 0, stagger: 0.1, duration: 1, delay: 0.1 })
       .from(".gh-sub",     { y: 20, opacity: 0, duration: 0.7 }, "-=0.5")
@@ -144,6 +154,8 @@ export default function GalleryPage() {
   useEffect(() => {
     if (loading) return;
     const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
+
       ScrollTrigger.create({
         trigger: ".masonry-grid",
         start: "top 90%",
@@ -155,6 +167,34 @@ export default function GalleryPage() {
           });
         },
         once: true,
+      });
+
+      mm.add("(max-width: 900px)", () => {
+        gsap.to(".gh-line", {
+          yPercent: -12,
+          ease: "none",
+          scrollTrigger: { trigger: "section:first-of-type", start: "top top", end: "bottom top", scrub: 1 },
+        });
+
+        gsap.utils.toArray<HTMLElement>(".art-card").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            {
+              y: 48,
+              opacity: 0,
+              scale: 0.95,
+            },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.75,
+              ease: "power3.out",
+              delay: index * 0.015,
+              scrollTrigger: { trigger: el, start: "top 92%", once: true },
+            }
+          );
+        });
       });
     }, mainRef);
     return () => ctx.revert();
@@ -178,6 +218,8 @@ export default function GalleryPage() {
       }}>
         <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,125,90,0.12),transparent 70%)",top:"-15%",right:"-10%",animation:"floatSlow 20s ease-in-out infinite"}} />
         <div style={{position:"absolute",width:350,height:350,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,154,126,0.1),transparent 70%)",bottom:"-10%",left:"-5%",animation:"floatSlow 20s ease-in-out infinite",animationDelay:"-8s"}} />
+        <div style={{position:"absolute",width:"62vw",height:"62vw",maxWidth:560,maxHeight:560,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,255,255,0.12),transparent 68%)",top:"-20%",right:"8%",filter:"blur(24px)",pointerEvents:"none"}} />
+        <div style={{position:"absolute",width:"50vw",height:"50vw",maxWidth:420,maxHeight:420,borderRadius:"50%",background:"radial-gradient(circle,rgba(196,125,90,0.18),transparent 70%)",bottom:"-12%",left:"-6%",filter:"blur(34px)",pointerEvents:"none"}} />
 
         <div style={{maxWidth:1400,margin:"0 auto",width:"100%",position:"relative",zIndex:1}}>
           <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
@@ -246,6 +288,7 @@ export default function GalleryPage() {
                     position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",
                     transition:"transform 0.8s cubic-bezier(0.25,0.8,0.25,1)",
                     transform: isHovered ? "scale(1.05)" : "scale(1)",
+                    ...viewTransitionName(`artwork-${art.slug || art._id}`),
                   }} />
                 ) : (
                   <>
@@ -303,6 +346,17 @@ export default function GalleryPage() {
                 {art.status === "sold" && !isHovered && (
                   <div style={{position:"absolute",top:16,left:16,fontFamily:"'Outfit',sans-serif",fontSize:"0.6rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.6)",background:"rgba(0,0,0,0.4)",backdropFilter:"blur(8px)",padding:"3px 10px"}}>Sold</div>
                 )}
+
+                {/* PROCESS badge — when timeline exists and sold isn't taking that corner */}
+                {art.status !== "sold" && (art.processTimeline?.length || 0) > 0 && (
+                  <div style={{
+                    position:"absolute",top:16,left:16,
+                    fontFamily:"'Outfit',sans-serif",fontSize:"0.6rem",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",
+                    color:"#F5F0E8",background:"rgba(196,125,90,0.85)",
+                    padding:"4px 10px",
+                    opacity: 0.9,
+                  }}>Process</div>
+                )}
               </div>
             );
           })}
@@ -337,7 +391,10 @@ export default function GalleryPage() {
             {/* Art preview */}
             <div className="lightbox-art" style={{aspectRatio:"3/4",background:selectedArt.color,position:"relative",overflow:"hidden"}}>
               {selectedArt.imageUrl ? (
-                <img src={selectedArt.imageUrl} alt={selectedArt.title} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                <img src={selectedArt.imageUrl} alt={selectedArt.title} style={{
+                  width:"100%",height:"100%",objectFit:"cover",
+                  ...viewTransitionName(`artwork-${selectedArt.slug || selectedArt._id}`),
+                }} />
               ) : (
                 <>
                   <div style={{background:`linear-gradient(135deg, ${selectedArt.color}, ${selectedArt.color}cc)`,position:"absolute",inset:0}} />
@@ -358,6 +415,31 @@ export default function GalleryPage() {
               <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.05rem",fontWeight:300,fontStyle:"italic",color:"#D4C9B8",lineHeight:1.7,marginBottom:32}}>
                 {selectedArt.description || "Each piece reflects careful observation, material study, and a personal studio practice developed over time."}
               </p>
+
+              {selectedArt.processTimeline && selectedArt.processTimeline.length > 0 && (
+                <details open style={{marginBottom:24,borderTop:"1px solid rgba(245,240,232,0.1)",paddingTop:20}}>
+                  <summary style={{
+                    cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:"0.7rem",fontWeight:500,
+                    letterSpacing:"0.15em",textTransform:"uppercase",color:"#C4A86E",marginBottom:16,
+                    listStyle:"none",display:"flex",alignItems:"center",gap:10,
+                  }}>
+                    <span style={{width:20,height:1.5,background:"#C4A86E"}} />
+                    Creation Timeline
+                    <span style={{color:"#B8AFA3",fontSize:"0.7rem",marginLeft:"auto"}}>
+                      {selectedArt.processTimeline.length} {selectedArt.processTimeline.length === 1 ? "step" : "steps"}
+                    </span>
+                  </summary>
+                  <TimelineViewer
+                    steps={selectedArt.processTimeline}
+                    finalImageUrl={selectedArt.imageUrl}
+                    finalImageLqip={selectedArt.imageLqip}
+                    finalTitle={selectedArt.title}
+                    variant="inline"
+                    artworkId={selectedArt.slug || selectedArt._id}
+                  />
+                </details>
+              )}
+
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
                 <span style={{fontFamily:"'DM Serif Display',serif",fontSize:"1.8rem",color:"#F5F0E8"}}>
                   {selectedArt.status === "sold" ? "Sold" : selectedArt.price ? `$${selectedArt.price.toLocaleString()}` : "Inquire"}
@@ -401,6 +483,7 @@ export default function GalleryPage() {
           <div className="footer-logo">Palm Art Studio</div>
           <ul className="footer-links">
             <li><a href="/gallery">Gallery</a></li>
+            <li><a href="/process">Process</a></li>
             <li><a href="/about">About</a></li>
             <li><a href="/#shop">Shop</a></li>
             <li><a href="/#community">Events</a></li>

@@ -38,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="view-transition" content="same-origin" />
       </head>
       <body>
         {children}

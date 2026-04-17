@@ -15,7 +15,17 @@ export async function GET() {
     const artworks = await client.fetch(`*[_type == "artwork"] | order(order asc) {
       _id, title, slug, medium, dimensions, year, description, status, price,
       printPrice, featured, category, order,
-      "imageUrl": image.asset->url
+      "imageUrl": image.asset->url,
+      "imageLqip": image.asset->metadata.lqip,
+      processTimeline[]{
+        _key,
+        stage,
+        caption,
+        capturedAt,
+        "imageUrl": image.asset->url,
+        "imageLqip": image.asset->metadata.lqip,
+        image
+      }
     }`);
     return NextResponse.json(artworks);
   } catch (e: any) {
@@ -57,6 +67,19 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    if (Array.isArray(rest.processTimeline) && rest.processTimeline.length > 0) {
+      doc.processTimeline = rest.processTimeline.map((t: any, i: number) => ({
+        _key: t._key || `t_${Date.now()}_${i}`,
+        _type: "timelineStep",
+        image: t.imageAssetId
+          ? { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } }
+          : t.image,
+        ...(t.stage ? { stage: t.stage } : {}),
+        ...(t.caption ? { caption: t.caption } : {}),
+        ...(t.capturedAt ? { capturedAt: t.capturedAt } : {}),
+      }));
+    }
+
     const result = await client.create(doc as any);
     return NextResponse.json(result);
   } catch (e: any) {
@@ -87,6 +110,19 @@ export async function PATCH(req: NextRequest) {
         _type: "image",
         asset: { _type: "reference", _ref: imageAssetId },
       };
+    }
+
+    if (Array.isArray(rest.processTimeline)) {
+      patch.processTimeline = rest.processTimeline.map((t: any, i: number) => ({
+        _key: t._key || `t_${Date.now()}_${i}`,
+        _type: "timelineStep",
+        image: t.imageAssetId
+          ? { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } }
+          : t.image,
+        ...(t.stage !== undefined ? { stage: t.stage } : {}),
+        ...(t.caption !== undefined ? { caption: t.caption } : {}),
+        ...(t.capturedAt !== undefined ? { capturedAt: t.capturedAt } : {}),
+      }));
     }
 
     const result = await client.patch(_id).set(patch).commit();

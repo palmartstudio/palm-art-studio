@@ -190,5 +190,41 @@ export default defineType({
         defineField({ name: "ctaSecondary", title: "CTA Secondary Button", type: "string", initialValue: "Browse the Shop" }),
       ],
     }),
+
+    // ═══════════════════════════════════════
+    // PROCESS PAGE
+    // ═══════════════════════════════════════
+    defineField({
+      name: "processPage",
+      title: "Process Page",
+      type: "object",
+      fields: [
+        defineField({ name: "eyebrow", title: "Eyebrow Tag", type: "string", initialValue: "Behind the Canvas" }),
+        defineField({ name: "heading", title: "Page Heading", type: "string", initialValue: "How the Work Gets Made" }),
+        defineField({
+          name: "subtitle",
+          title: "Subtitle",
+          type: "text",
+          rows: 2,
+          initialValue: "Every painting starts with a blank canvas, a reference, and an idea. These are the pieces documented stage by stage — proof of the hours behind each finished work.",
+        }),
+        defineField({
+          name: "emptyStateMessage",
+          title: "Empty State Message",
+          type: "string",
+          initialValue: "New process timelines coming soon. Check back shortly.",
+        }),
+        defineField({ name: "ctaBannerHeading", title: "CTA Banner Heading", type: "string", initialValue: "Commission a piece" }),
+        defineField({
+          name: "ctaBannerDescription",
+          title: "CTA Banner Description",
+          type: "text",
+          rows: 2,
+          initialValue: "Interested in commissioning a custom piece? I document the full process for every commission.",
+        }),
+        defineField({ name: "ctaPrimary", title: "CTA Primary Button", type: "string", initialValue: "Start a Commission" }),
+        defineField({ name: "ctaSecondary", title: "CTA Secondary Button", type: "string", initialValue: "View Gallery" }),
+      ],
+    }),
   ],
 });
