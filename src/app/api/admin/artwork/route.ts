@@ -22,9 +22,17 @@ export async function GET() {
         stage,
         caption,
         capturedAt,
+        mediaType,
         "imageUrl": image.asset->url,
         "imageLqip": image.asset->metadata.lqip,
-        image
+        image,
+        "videoUrl": video.asset->url,
+        "videoMimeType": video.asset->mimeType,
+        "videoSize": video.asset->size,
+        video,
+        "videoPosterUrl": videoPoster.asset->url,
+        "videoPosterLqip": videoPoster.asset->metadata.lqip,
+        videoPoster
       }
     }`);
     return NextResponse.json(artworks);
@@ -68,16 +76,27 @@ export async function POST(req: NextRequest) {
     }
 
     if (Array.isArray(rest.processTimeline) && rest.processTimeline.length > 0) {
-      doc.processTimeline = rest.processTimeline.map((t: any, i: number) => ({
-        _key: t._key || `t_${Date.now()}_${i}`,
-        _type: "timelineStep",
-        image: t.imageAssetId
-          ? { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } }
-          : t.image,
-        ...(t.stage ? { stage: t.stage } : {}),
-        ...(t.caption ? { caption: t.caption } : {}),
-        ...(t.capturedAt ? { capturedAt: t.capturedAt } : {}),
-      }));
+      doc.processTimeline = rest.processTimeline.map((t: any, i: number) => {
+        const mediaType = t.mediaType === "video" ? "video" : "image";
+        const base: Record<string, unknown> = {
+          _key: t._key || `t_${Date.now()}_${i}`,
+          _type: "timelineStep",
+          mediaType,
+          ...(t.stage ? { stage: t.stage } : {}),
+          ...(t.caption ? { caption: t.caption } : {}),
+          ...(t.capturedAt ? { capturedAt: t.capturedAt } : {}),
+        };
+        if (mediaType === "video") {
+          if (t.videoAssetId) base.video = { _type: "file", asset: { _type: "reference", _ref: t.videoAssetId } };
+          else if (t.video) base.video = t.video;
+          if (t.videoPosterAssetId) base.videoPoster = { _type: "image", asset: { _type: "reference", _ref: t.videoPosterAssetId } };
+          else if (t.videoPoster) base.videoPoster = t.videoPoster;
+        } else {
+          if (t.imageAssetId) base.image = { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } };
+          else if (t.image) base.image = t.image;
+        }
+        return base;
+      });
     }
 
     const result = await client.create(doc as any);
@@ -113,16 +132,27 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (Array.isArray(rest.processTimeline)) {
-      patch.processTimeline = rest.processTimeline.map((t: any, i: number) => ({
-        _key: t._key || `t_${Date.now()}_${i}`,
-        _type: "timelineStep",
-        image: t.imageAssetId
-          ? { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } }
-          : t.image,
-        ...(t.stage !== undefined ? { stage: t.stage } : {}),
-        ...(t.caption !== undefined ? { caption: t.caption } : {}),
-        ...(t.capturedAt !== undefined ? { capturedAt: t.capturedAt } : {}),
-      }));
+      patch.processTimeline = rest.processTimeline.map((t: any, i: number) => {
+        const mediaType = t.mediaType === "video" ? "video" : "image";
+        const base: Record<string, unknown> = {
+          _key: t._key || `t_${Date.now()}_${i}`,
+          _type: "timelineStep",
+          mediaType,
+          ...(t.stage !== undefined ? { stage: t.stage } : {}),
+          ...(t.caption !== undefined ? { caption: t.caption } : {}),
+          ...(t.capturedAt !== undefined ? { capturedAt: t.capturedAt } : {}),
+        };
+        if (mediaType === "video") {
+          if (t.videoAssetId) base.video = { _type: "file", asset: { _type: "reference", _ref: t.videoAssetId } };
+          else if (t.video) base.video = t.video;
+          if (t.videoPosterAssetId) base.videoPoster = { _type: "image", asset: { _type: "reference", _ref: t.videoPosterAssetId } };
+          else if (t.videoPoster) base.videoPoster = t.videoPoster;
+        } else {
+          if (t.imageAssetId) base.image = { _type: "image", asset: { _type: "reference", _ref: t.imageAssetId } };
+          else if (t.image) base.image = t.image;
+        }
+        return base;
+      });
     }
 
     const result = await client.patch(_id).set(patch).commit();

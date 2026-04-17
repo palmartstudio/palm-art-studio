@@ -17,7 +17,7 @@ export default defineType({
     defineField({
       name: "processTimeline",
       title: "Creation Timeline",
-      description: "Progress photos showing this piece being created. Shown on the artwork detail lightbox and on the Process page.",
+      description: "Progress photos or short video clips showing this piece being created. Shown on the artwork detail lightbox and on the Process page.",
       type: "array",
       of: [
         {
@@ -26,11 +26,41 @@ export default defineType({
           title: "Timeline Step",
           fields: [
             defineField({
+              name: "mediaType",
+              title: "Media",
+              type: "string",
+              options: {
+                list: [
+                  { title: "Photo", value: "image" },
+                  { title: "Video", value: "video" },
+                ],
+                layout: "radio",
+              },
+              initialValue: "image",
+              validation: (r) => r.required(),
+            }),
+            defineField({
               name: "image",
               title: "Progress Photo",
               type: "image",
               options: { hotspot: true },
-              validation: (r) => r.required(),
+              hidden: ({ parent }) => parent?.mediaType === "video",
+            }),
+            defineField({
+              name: "video",
+              title: "Video Clip",
+              type: "file",
+              description: "Short clip — under 30 seconds and under 30 MB recommended. MP4 or MOV plays best on mobile.",
+              options: { accept: "video/mp4,video/quicktime,video/webm" },
+              hidden: ({ parent }) => parent?.mediaType !== "video",
+            }),
+            defineField({
+              name: "videoPoster",
+              title: "Video Poster (optional)",
+              type: "image",
+              options: { hotspot: true },
+              description: "Still frame shown before the video loads. If omitted, the first frame is used.",
+              hidden: ({ parent }) => parent?.mediaType !== "video",
             }),
             defineField({
               name: "stage",
@@ -66,8 +96,8 @@ export default defineType({
             }),
           ],
           preview: {
-            select: { media: "image", title: "stage", subtitle: "caption" },
-            prepare({ media, title, subtitle }) {
+            select: { media: "image", posterMedia: "videoPoster", mediaType: "mediaType", title: "stage", subtitle: "caption" },
+            prepare({ media, posterMedia, mediaType, title, subtitle }) {
               const stageLabels: Record<string, string> = {
                 blank: "Blank Canvas",
                 underpainting: "Underpainting",
@@ -79,7 +109,12 @@ export default defineType({
                 studio: "In Studio",
                 other: "Other",
               };
-              return { media, title: stageLabels[title as string] || title || "Step", subtitle };
+              const prefix = mediaType === "video" ? "▶ " : "";
+              return {
+                media: mediaType === "video" ? (posterMedia || media) : media,
+                title: prefix + (stageLabels[title as string] || title || "Step"),
+                subtitle,
+              };
             },
           },
         },

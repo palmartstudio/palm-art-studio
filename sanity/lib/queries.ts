@@ -15,8 +15,14 @@ const timelineProjection = `
     stage,
     caption,
     capturedAt,
+    mediaType,
     "imageUrl": image.asset->url,
-    "imageLqip": image.asset->metadata.lqip
+    "imageLqip": image.asset->metadata.lqip,
+    "videoUrl": video.asset->url,
+    "videoMimeType": video.asset->mimeType,
+    "videoSize": video.asset->size,
+    "videoPosterUrl": videoPoster.asset->url,
+    "videoPosterLqip": videoPoster.asset->metadata.lqip
   }
 `;
 

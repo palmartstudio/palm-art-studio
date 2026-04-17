@@ -14,12 +14,22 @@ interface TimelineStepForm {
   stage?: string;
   caption?: string;
   capturedAt?: string;
+  mediaType?: "image" | "video";
   imageUrl?: string;
   imageLqip?: string;
   imageAssetId?: string;
   image?: { _type?: string; asset?: { _type?: string; _ref?: string } };
+  videoUrl?: string;
+  videoMimeType?: string;
+  videoAssetId?: string;
+  video?: { _type?: string; asset?: { _type?: string; _ref?: string } };
+  videoPosterUrl?: string;
+  videoPosterLqip?: string;
+  videoPosterAssetId?: string;
+  videoPoster?: { _type?: string; asset?: { _type?: string; _ref?: string } };
   _uploading?: boolean;
   _uploadProgress?: number;
+  _uploadError?: string;
 }
 interface Artwork {
   _id: string; title: string; medium?: string; dimensions?: string; price?: number;
@@ -106,24 +116,31 @@ function UploadZone({ onFile, uploading, progress }: { onFile: (f: File) => void
 }
 
 // ─── Timeline Editor (inside ArtworkModal) ───
+const VIDEO_MAX_BYTES = 30 * 1024 * 1024; // 30 MB
+const VIDEO_MAX_SECONDS = 30;
+const VIDEO_ACCEPT = "video/mp4,video/quicktime,video/webm";
+
 function TimelineEditor({ steps, onChange }: {
   steps: TimelineStepForm[];
   onChange: (next: TimelineStepForm[]) => void;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const addImageInputRef = useRef<HTMLInputElement>(null);
+  const addVideoInputRef = useRef<HTMLInputElement>(null);
+  const swapFileInputRef = useRef<HTMLInputElement>(null);
+  const swapForKeyRef = useRef<{ key: string; kind: "image" | "video" | "poster" } | null>(null);
   const getLatestStepsRef = useRef<TimelineStepForm[]>(steps);
   useEffect(() => { getLatestStepsRef.current = steps; }, [steps]);
 
-  const uploadImage = async (file: File, tempKey: string) => {
+  const upload = async (file: File, endpoint: "images" | "files", tempKey: string) => {
     try {
       const configRes = await fetch("/api/admin/upload-config");
       if (!configRes.ok) throw new Error("upload-config failed");
       const { token, dataset, apiVersion } = await configRes.json();
-      const asset = await new Promise<{ _id: string }>((resolve, reject) => {
+      const asset = await new Promise<{ _id: string; mimeType?: string; size?: number; url?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/images/${dataset}?filename=${encodeURIComponent(file.name)}`);
+        xhr.open("POST", `https://mwzx64sx.api.sanity.io/v${apiVersion}/assets/${endpoint}/${dataset}?filename=${encodeURIComponent(file.name)}`);
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        xhr.setRequestHeader("Content-Type", file.type || "image/jpeg");
+        xhr.setRequestHeader("Content-Type", file.type || (endpoint === "images" ? "image/jpeg" : "application/octet-stream"));
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
             const pct = Math.round((e.loaded / e.total) * 100);
@@ -138,29 +155,114 @@ function TimelineEditor({ steps, onChange }: {
         xhr.onerror = () => reject(new Error("net"));
         xhr.send(file);
       });
-      return asset._id;
+      return asset;
     } catch (e) { console.error(e); return null; }
   };
 
-  const handleAdd = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    const tempKey = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const localPreview = await new Promise<string>((resolve) => {
+  const validateVideo = (file: File): Promise<string | null> =>
+    new Promise((resolve) => {
+      if (file.size > VIDEO_MAX_BYTES) {
+        resolve(`Video is ${Math.round(file.size / 1024 / 1024)} MB — max ${VIDEO_MAX_BYTES / 1024 / 1024} MB.`);
+        return;
+      }
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        if (video.duration > VIDEO_MAX_SECONDS + 0.5) {
+          resolve(`Video is ${video.duration.toFixed(1)}s — max ${VIDEO_MAX_SECONDS}s.`);
+        } else {
+          resolve(null);
+        }
+      };
+      video.onerror = () => { URL.revokeObjectURL(video.src); resolve("Couldn't read video metadata. Try a different file."); };
+      video.src = URL.createObjectURL(file);
+    });
+
+  const readDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve) => {
       const r = new FileReader();
       r.onload = (e) => resolve((e.target?.result as string) || "");
       r.readAsDataURL(file);
     });
-    const draft: TimelineStepForm = { _key: tempKey, stage: "", caption: "", capturedAt: "", imageUrl: localPreview, _uploading: true, _uploadProgress: 0 };
+
+  const handleAddImage = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const tempKey = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const preview = await readDataUrl(file);
+    const draft: TimelineStepForm = { _key: tempKey, mediaType: "image", stage: "", caption: "", capturedAt: "", imageUrl: preview, _uploading: true, _uploadProgress: 0 };
     onChange([...getLatestStepsRef.current, draft]);
-    const assetId = await uploadImage(file, tempKey);
+    const asset = await upload(file, "images", tempKey);
     onChange(getLatestStepsRef.current.map((s) =>
       s._key === tempKey
-        ? assetId
-          ? { ...s, imageAssetId: assetId, _uploading: false, _uploadProgress: 100 }
-          : { ...s, _uploading: false, _uploadProgress: 0 }
+        ? asset
+          ? { ...s, imageAssetId: asset._id, _uploading: false, _uploadProgress: 100 }
+          : { ...s, _uploading: false, _uploadError: "Upload failed" }
         : s
     ));
+  };
+
+  const handleAddVideo = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const err = await validateVideo(file);
+    if (err) { alert(err); return; }
+    const tempKey = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const preview = URL.createObjectURL(file);
+    const draft: TimelineStepForm = { _key: tempKey, mediaType: "video", stage: "", caption: "", capturedAt: "", videoUrl: preview, videoMimeType: file.type, _uploading: true, _uploadProgress: 0 };
+    onChange([...getLatestStepsRef.current, draft]);
+    const asset = await upload(file, "files", tempKey);
+    onChange(getLatestStepsRef.current.map((s) =>
+      s._key === tempKey
+        ? asset
+          ? { ...s, videoAssetId: asset._id, videoMimeType: asset.mimeType || file.type, _uploading: false, _uploadProgress: 100 }
+          : { ...s, _uploading: false, _uploadError: "Upload failed" }
+        : s
+    ));
+  };
+
+  const handleSwap = async (files: FileList | null) => {
+    const target = swapForKeyRef.current;
+    if (!files || files.length === 0 || !target) return;
+    swapForKeyRef.current = null;
+    const file = files[0];
+    if (target.kind === "video") {
+      const err = await validateVideo(file);
+      if (err) { alert(err); return; }
+    }
+    const endpoint = target.kind === "video" ? "files" : "images";
+    const currStep = getLatestStepsRef.current.find((s) => s._key === target.key);
+    if (!currStep) return;
+    onChange(getLatestStepsRef.current.map((s) => s._key === target.key ? { ...s, _uploading: true, _uploadProgress: 0, _uploadError: undefined } : s));
+    const asset = await upload(file, endpoint, target.key);
+    if (!asset) {
+      onChange(getLatestStepsRef.current.map((s) => s._key === target.key ? { ...s, _uploading: false, _uploadError: "Upload failed" } : s));
+      return;
+    }
+    onChange(getLatestStepsRef.current.map((s) => {
+      if (s._key !== target.key) return s;
+      const patch: Partial<TimelineStepForm> = { _uploading: false, _uploadProgress: 100 };
+      if (target.kind === "video") {
+        patch.videoAssetId = asset._id;
+        patch.videoMimeType = asset.mimeType || file.type;
+        patch.videoUrl = URL.createObjectURL(file);
+      } else if (target.kind === "poster") {
+        patch.videoPosterAssetId = asset._id;
+      } else {
+        patch.imageAssetId = asset._id;
+      }
+      return { ...s, ...patch };
+    }));
+  };
+
+  const openSwap = (key: string, kind: "image" | "video" | "poster") => {
+    swapForKeyRef.current = { key, kind };
+    const input = swapFileInputRef.current;
+    if (!input) return;
+    input.accept = kind === "video" ? VIDEO_ACCEPT : "image/*";
+    input.value = "";
+    input.click();
   };
 
   const update = (key: string, patch: Partial<TimelineStepForm>) => { onChange(steps.map((s) => (s._key === key ? { ...s, ...patch } : s))); };
@@ -175,57 +277,119 @@ function TimelineEditor({ steps, onChange }: {
     onChange(next);
   };
 
+  const switchMediaType = (key: string, next: "image" | "video") => {
+    onChange(steps.map((s) => {
+      if (s._key !== key) return s;
+      if (s.mediaType === next) return s;
+      return { ...s, mediaType: next };
+    }));
+  };
+
   return (
     <div>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }}
-        onChange={(e) => { handleAdd(e.target.files); e.target.value = ""; }} />
+      <input ref={addImageInputRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={(e) => { handleAddImage(e.target.files); e.target.value = ""; }} />
+      <input ref={addVideoInputRef} type="file" accept={VIDEO_ACCEPT} style={{ display: "none" }}
+        onChange={(e) => { handleAddVideo(e.target.files); e.target.value = ""; }} />
+      <input ref={swapFileInputRef} type="file" style={{ display: "none" }}
+        onChange={(e) => { handleSwap(e.target.files); e.target.value = ""; }} />
+
       {steps.length === 0 && (
         <div style={{ border: `2px dashed ${C.border2}`, borderRadius: 12, padding: 24, textAlign: "center", color: C.muted, fontSize: 12, marginBottom: 12 }}>
-          No timeline steps yet. Add progress photos below.
+          No timeline steps yet. Add progress photos or short videos below.
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
-        {steps.map((s, i) => (
-          <div key={s._key} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "flex-start", padding: 12, background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 10, position: "relative" }}>
-            <div style={{ width: 96, height: 120, background: C.bg, borderRadius: 8, overflow: "hidden", position: "relative", flexShrink: 0 }}>
-              {s.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              )}
-              {s._uploading && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(10,9,6,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <div style={{ color: C.text, fontSize: 11 }}>{s._uploadProgress || 0}%</div>
-                  <div style={{ width: "70%", height: 3, background: C.bg2, borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: `${s._uploadProgress || 0}%`, height: "100%", background: C.terra, transition: "width 0.2s" }} />
-                  </div>
+        {steps.map((s, i) => {
+          const mt = s.mediaType === "video" ? "video" : "image";
+          return (
+            <div key={s._key} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "flex-start", padding: 12, background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 10, position: "relative" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                <div style={{ width: 96, height: 120, background: C.bg, borderRadius: 8, overflow: "hidden", position: "relative" }}>
+                  {mt === "video" ? (
+                    s.videoUrl ? (
+                      <video src={s.videoUrl} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : s.videoPosterUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.videoPosterUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim, fontSize: 20 }}>▶</div>
+                    )
+                  ) : s.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : null}
+                  {mt === "video" && (
+                    <div style={{ position: "absolute", top: 4, left: 4, padding: "2px 5px", background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", borderRadius: 3 }}>VIDEO</div>
+                  )}
+                  {s._uploading && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(10,9,6,0.6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <div style={{ color: C.text, fontSize: 11 }}>{s._uploadProgress || 0}%</div>
+                      <div style={{ width: "70%", height: 3, background: C.bg2, borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ width: `${s._uploadProgress || 0}%`, height: "100%", background: C.terra, transition: "width 0.2s" }} />
+                      </div>
+                    </div>
+                  )}
+                  {s._uploadError && !s._uploading && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(196,75,75,0.75)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, textAlign: "center", padding: 4 }}>
+                      {s._uploadError}
+                    </div>
+                  )}
                 </div>
-              )}
+                <button type="button" onClick={() => openSwap(s._key, mt === "video" ? "video" : "image")}
+                  style={{ padding: "3px 6px", background: "transparent", border: `1px solid ${C.border2}`, color: C.muted, fontFamily: "inherit", fontSize: 10, cursor: "pointer", borderRadius: 4 }}>
+                  Replace {mt}
+                </button>
+                {mt === "video" && (
+                  <button type="button" onClick={() => openSwap(s._key, "poster")}
+                    style={{ padding: "3px 6px", background: "transparent", border: `1px solid ${C.border2}`, color: C.muted, fontFamily: "inherit", fontSize: 10, cursor: "pointer", borderRadius: 4 }}>
+                    {s.videoPosterUrl || s.videoPosterAssetId ? "Change poster" : "Set poster"}
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6, fontSize: 11, color: C.muted, alignItems: "center" }}>
+                  <span>Type:</span>
+                  <label style={{ display: "flex", gap: 4, alignItems: "center", cursor: "pointer" }}>
+                    <input type="radio" checked={mt === "image"} onChange={() => switchMediaType(s._key, "image")} /> Photo
+                  </label>
+                  <label style={{ display: "flex", gap: 4, alignItems: "center", cursor: "pointer" }}>
+                    <input type="radio" checked={mt === "video"} onChange={() => switchMediaType(s._key, "video")} /> Video
+                  </label>
+                </div>
+                <select value={s.stage || ""} onChange={(e) => update(s._key, { stage: e.target.value })}
+                  style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }}>
+                  {STAGE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+                <input type="date" value={s.capturedAt || ""} onChange={(e) => update(s._key, { capturedAt: e.target.value })}
+                  style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }} />
+                <textarea value={s.caption || ""} onChange={(e) => update(s._key, { caption: e.target.value })} placeholder="Caption (optional)" rows={2}
+                  style={{ gridColumn: "1 / -1", padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none", resize: "vertical" }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <button type="button" onClick={() => move(s._key, -1)} disabled={i === 0} title="Move up"
+                  style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === 0 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === 0 ? 0.4 : 1 }}>↑</button>
+                <button type="button" onClick={() => move(s._key, 1)} disabled={i === steps.length - 1} title="Move down"
+                  style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === steps.length - 1 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === steps.length - 1 ? 0.4 : 1 }}>↓</button>
+                <button type="button" onClick={() => remove(s._key)} title="Remove step"
+                  style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: "#d97b6a", cursor: "pointer", fontSize: 12, padding: "4px 8px" }}>×</button>
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <select value={s.stage || ""} onChange={(e) => update(s._key, { stage: e.target.value })}
-                style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }}>
-                {STAGE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-              <input type="date" value={s.capturedAt || ""} onChange={(e) => update(s._key, { capturedAt: e.target.value })}
-                style={{ padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none" }} />
-              <textarea value={s.caption || ""} onChange={(e) => update(s._key, { caption: e.target.value })} placeholder="Caption (optional)" rows={2}
-                style={{ gridColumn: "1 / -1", padding: "8px 10px", background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 6, color: C.text, fontFamily: "inherit", fontSize: 12, outline: "none", resize: "vertical" }} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <button type="button" onClick={() => move(s._key, -1)} disabled={i === 0} title="Move up"
-                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === 0 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === 0 ? 0.4 : 1 }}>↑</button>
-              <button type="button" onClick={() => move(s._key, 1)} disabled={i === steps.length - 1} title="Move down"
-                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: i === steps.length - 1 ? "not-allowed" : "pointer", fontSize: 12, padding: "4px 8px", opacity: i === steps.length - 1 ? 0.4 : 1 }}>↓</button>
-              <button type="button" onClick={() => remove(s._key)} title="Remove step"
-                style={{ background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: "#d97b6a", cursor: "pointer", fontSize: 12, padding: "4px 8px" }}>×</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      <button type="button" onClick={() => fileInputRef.current?.click()}
-        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: `1px dashed ${C.border2}`, background: "transparent", color: C.muted, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
-        + Add Step
-      </button>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" onClick={() => addImageInputRef.current?.click()}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: `1px dashed ${C.border2}`, background: "transparent", color: C.muted, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+          + Add Photo
+        </button>
+        <button type="button" onClick={() => addVideoInputRef.current?.click()}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: `1px dashed ${C.border2}`, background: "transparent", color: C.muted, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+          + Add Video
+          <span style={{ fontSize: 10, color: C.dim }}>(≤30s, ≤30MB)</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -341,9 +505,19 @@ function GalleryManager() {
     const isNew = !(modal as Artwork)?._id;
     const cleanedTimeline = Array.isArray(data.processTimeline)
       ? data.processTimeline
-          .filter((s: TimelineStepForm) => !s._uploading && (s.imageAssetId || s.image))
+          .filter((s: TimelineStepForm) => {
+            if (s._uploading) return false;
+            const mt = s.mediaType === "video" ? "video" : "image";
+            if (mt === "video") return !!(s.videoAssetId || s.video);
+            return !!(s.imageAssetId || s.image);
+          })
           .map((s: TimelineStepForm) => {
-            const { imageUrl, imageLqip, _uploading, _uploadProgress, ...rest } = s;
+            const {
+              imageUrl, imageLqip,
+              videoUrl, videoMimeType, videoPosterUrl, videoPosterLqip,
+              _uploading, _uploadProgress, _uploadError,
+              ...rest
+            } = s;
             return rest;
           })
       : undefined;

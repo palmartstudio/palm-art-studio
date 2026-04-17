@@ -10,8 +10,13 @@ export interface TimelineStep {
   stage?: string;
   caption?: string;
   capturedAt?: string;
+  mediaType?: "image" | "video";
   imageUrl?: string;
   imageLqip?: string;
+  videoUrl?: string;
+  videoMimeType?: string;
+  videoPosterUrl?: string;
+  videoPosterLqip?: string;
 }
 
 export interface TimelineViewerProps {
@@ -183,7 +188,15 @@ export default function TimelineViewer({
                   ...finalStyle,
                 }}
               >
-                {step.imageUrl ? (
+                {step.mediaType === "video" && step.videoUrl ? (
+                  <TimelineVideo
+                    src={step.videoUrl}
+                    mime={step.videoMimeType}
+                    poster={step.videoPosterUrl || step.imageUrl}
+                    posterLqip={step.videoPosterLqip || step.imageLqip}
+                    alt={step.caption || STAGE_LABELS[step.stage || "other"] || "Timeline step"}
+                  />
+                ) : step.imageUrl ? (
                   <Image
                     src={step.imageUrl}
                     alt={step.caption || STAGE_LABELS[step.stage || "other"] || "Timeline step"}
@@ -290,7 +303,23 @@ export default function TimelineViewer({
                 touchAction: "pinch-zoom",
               }}
             >
-              {ordered[zoomIndex].imageUrl && (
+              {ordered[zoomIndex].mediaType === "video" && ordered[zoomIndex].videoUrl ? (
+                <video
+                  src={ordered[zoomIndex].videoUrl}
+                  poster={ordered[zoomIndex].videoPosterUrl || ordered[zoomIndex].imageUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  loop
+                  preload="metadata"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "86vh",
+                    objectFit: "contain",
+                    background: "#000",
+                  }}
+                />
+              ) : ordered[zoomIndex].imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={ordered[zoomIndex].imageUrl}
@@ -304,7 +333,7 @@ export default function TimelineViewer({
                   }}
                   draggable={false}
                 />
-              )}
+              ) : null}
             </motion.div>
 
             <button
@@ -453,6 +482,86 @@ export default function TimelineViewer({
         }
       `}</style>
     </div>
+  );
+}
+
+function TimelineVideo({
+  src,
+  mime,
+  poster,
+  posterLqip,
+  alt,
+}: {
+  src: string;
+  mime?: string;
+  poster?: string;
+  posterLqip?: string;
+  alt: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            el.play().catch(() => {
+              /* autoplay blocked — user can tap to fullscreen */
+            });
+          } else {
+            el.pause();
+          }
+        });
+      },
+      { threshold: [0, 0.5, 1] }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-label={alt}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          background: posterLqip ? `url(${posterLqip}) center/cover` : "#1E1B17",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          padding: "4px 8px",
+          background: "rgba(0,0,0,0.55)",
+          color: "#F5F0E8",
+          fontFamily: "'Outfit',sans-serif",
+          fontSize: "0.6rem",
+          letterSpacing: "0.15em",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          pointerEvents: "none",
+        }}
+      >
+        ▶ Video
+      </div>
+    </>
   );
 }
 
