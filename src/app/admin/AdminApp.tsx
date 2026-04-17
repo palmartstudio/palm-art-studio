@@ -393,7 +393,11 @@ function GalleryManager() {
       : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
           {filtered.map(art => (
-            <div key={art._id} style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", transition: "border-color 0.2s" }}>
+            <div key={art._id} onClick={() => setModal(art)} role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setModal(art); } }}
+              style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", transition: "border-color 0.2s, transform 0.2s", cursor: "pointer" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border2; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; }}>
               <div style={{ aspectRatio: "4/3", background: C.bg3, position: "relative", overflow: "hidden" }}>
                 {art.imageUrl ? <img src={art.imageUrl} alt={art.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim, fontSize: 12, fontStyle: "italic" }}>No image</div>}
@@ -406,8 +410,8 @@ function GalleryManager() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 600, color: C.terra }}>{art.price ? `$${art.price.toLocaleString()}` : "—"}</span>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => setModal(art)} style={{ padding: "5px 12px", background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 11 }}>Edit</button>
-                    <button onClick={() => handleDelete(art._id, art.title)} disabled={deleting === art._id} style={{ padding: "5px 10px", background: "none", border: "1px solid rgba(196,125,90,0.2)", borderRadius: 6, color: C.terra, cursor: "pointer", fontFamily: "inherit", fontSize: 11, opacity: deleting === art._id ? 0.5 : 1 }}>{deleting === art._id ? "..." : "✕"}</button>
+                    <button onClick={(e) => { e.stopPropagation(); setModal(art); }} style={{ padding: "5px 12px", background: "none", border: `1px solid ${C.border2}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 11 }}>Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(art._id, art.title); }} disabled={deleting === art._id} style={{ padding: "5px 10px", background: "none", border: "1px solid rgba(196,125,90,0.2)", borderRadius: 6, color: C.terra, cursor: "pointer", fontFamily: "inherit", fontSize: 11, opacity: deleting === art._id ? 0.5 : 1 }}>{deleting === art._id ? "..." : "✕"}</button>
                   </div>
                 </div>
               </div>
