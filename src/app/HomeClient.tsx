@@ -28,6 +28,53 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
   const navRef = useRef<HTMLElement>(null);
   const pc = pageContent || {};
 
+  // Contact form
+  const [contact, setContact] = useState({ name:"", email:"", subject:"", message:"" });
+  const [contactStatus, setContactStatus] = useState<"idle"|"sending"|"sent"|"error">("idle");
+  const [contactError, setContactError] = useState("");
+  const submitContact = useCallback(async () => {
+    if (!contact.name.trim() || !contact.message.trim()) {
+      setContactStatus("error");
+      setContactError("Please fill in your name and message.");
+      return;
+    }
+    setContactStatus("sending");
+    try {
+      const res = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contact),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Something went wrong.");
+      setContactStatus("sent");
+    } catch (e: any) {
+      setContactStatus("error");
+      setContactError(e.message || "Something went wrong — please email cj@palmartstudio.com directly.");
+    }
+  }, [contact]);
+
+  // Newsletter form
+  const [nlEmail, setNlEmail] = useState("");
+  const [nlStatus, setNlStatus] = useState<"idle"|"sending"|"sent"|"error">("idle");
+  const [nlError, setNlError] = useState("");
+  const submitNewsletter = useCallback(async () => {
+    setNlStatus("sending");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: nlEmail }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Something went wrong.");
+      setNlStatus("sent");
+    } catch (e: any) {
+      setNlStatus("error");
+      setNlError(e.message || "Something went wrong.");
+    }
+  }, [nlEmail]);
+
   const artistName = artist?.name || "Carolyn Jenkins";
   const studioLocation = artist?.studioLocation || "Deltona, FL";
   const heroSubtitle = preferUpdatedCopy(
@@ -567,24 +614,22 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
     { href: "/gallery", label: "Gallery" },
     { href: "/process", label: "Process" },
     { href: "/about",   label: "About" },
-    { href: "#shop",    label: "Shop" },
-    { href: "#community", label: "Events" },
+    ...(shopItems.length > 0 ? [{ href: "#shop", label: "Shop" }] : []),
+    ...(events.length > 0 ? [{ href: "#community", label: "Events" }] : []),
     { href: "#contact", label: "Contact" },
   ];
 
   const fallbackArtwork = Array(6).fill(null).map((_,i) => ({ _id:`ph${i}`, title:`Artwork ${i+1}`, medium:"Mixed Media" })) as Artwork[];
   const displayArtwork  = artwork.length > 0 ? artwork : fallbackArtwork;
-  const displayShop     = shopItems.length > 0 ? shopItems : [
-    { _id:"s1", title:"Victorian Dawn — Print",     medium:"Giclée · 18×24 in",          price:85,  badge:"Limited Edition" },
-    { _id:"s2", title:"Emotional Currents",         medium:"Mixed Media · 24×36 in",     price:1800,badge:"Original" },
-    { _id:"s3", title:"Florida Collection — Set 3", medium:"Giclée Prints · 11×14 in ea",price:180 },
-    { _id:"s4", title:"Custom Commission",          medium:"Watercolor or Mixed Media",  price:500 },
-  ] as ShopItem[];
-  const displayEvents   = events.length > 0 ? events : [
-    { _id:"e1", title:"CityArts Spring Exhibition",    date:"2026-04-12", location:"Orlando, FL" },
-    { _id:"e2", title:"Central Florida Art Festival",  date:"2026-05-03", location:"Winter Park, FL" },
-    { _id:"e3", title:"Studio Open House",             date:"2026-06-18", location:"Palm Art Studio" },
-  ] as Event[];
+  // Only real CMS shop items — never show placeholder products that can't be purchased
+  const displayShop     = shopItems;
+  const hasShop         = displayShop.length > 0;
+  // Split real events into upcoming vs recent past (no fake fallbacks)
+  const todayStr        = new Date().toISOString().slice(0, 10);
+  const upcomingEvents  = events.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date));
+  const pastEvents      = events.filter(e => e.date < todayStr).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const displayEvents   = upcomingEvents.length > 0 ? upcomingEvents : pastEvents;
+  const showingPastEvents = upcomingEvents.length === 0 && pastEvents.length > 0;
 
   return (
     <div ref={mainRef}>
@@ -611,7 +656,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
               <a href={item.href} onClick={closeMenu}>{item.label}</a>
             </li>
           ))}
-          <li><a href="#shop" className="nav-cta" onClick={closeMenu}>Shop Prints</a></li>
+          <li><a href={hasShop ? "#shop" : "#contact"} className="nav-cta" onClick={closeMenu}>{hasShop ? "Shop Prints" : "Commission a Piece"}</a></li>
         </ul>
       </nav>
 
@@ -631,7 +676,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             <p className="hero-subtitle h-sub">{heroSubtitle}</p>
             <div className="hero-actions h-actions">
               <a href="/gallery" className="btn-primary magnetic">{pc.homeHero?.ctaPrimary || "Explore the Gallery"}</a>
-              <a href="#shop" className="btn-secondary magnetic">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
+              {hasShop
+                ? <a href="#shop" className="btn-secondary magnetic">{pc.homeHero?.ctaSecondary || "Shop Originals & Prints"}</a>
+                : <a href="#contact" className="btn-secondary magnetic">Inquire About a Piece</a>}
             </div>
           </div>
           <div className="hero-gallery">
@@ -667,7 +714,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         </div>
         <div className="gallery-grid">
           {displayArtwork.slice(0,6).map((item, i) => (
-            <div key={item._id} className="gallery-item">
+            <a key={item._id} href="/gallery" className="gallery-item" style={{ display:"block", cursor:"pointer" }} aria-label={`View ${item.title} in the gallery`}>
               <div className="gallery-item-bg">
                 {item.imageUrl
                   ? <img src={item.imageUrl} alt={item.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -678,7 +725,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 <div className="gallery-item-meta">{item.medium || "Mixed Media"}{item.dimensions ? ` · ${item.dimensions}` : ""}</div>
                 {item.price && <div className="gallery-item-price">${item.price.toLocaleString()}</div>}
               </div>
-            </div>
+            </a>
           ))}
         </div>
         <div className="gallery-cta">
@@ -745,7 +792,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       </div>
 
 
-      {/* ═══ SHOP ═══ */}
+      {/* ═══ SHOP (only when real items exist in the CMS) ═══ */}
+      {hasShop && (
       <section id="shop">
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeShop?.eyebrow || "Shop"}</div>
@@ -775,13 +823,17 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           ))}
         </div>
       </section>
+      )}
 
-      {/* ═══ EVENTS ═══ */}
+      {/* ═══ EVENTS (upcoming if any, otherwise recent shows) ═══ */}
+      {displayEvents.length > 0 && (
       <section id="community">
         <div className="section-header reveal">
           <div className="section-eyebrow">{pc.homeEvents?.eyebrow || "Community"}</div>
-          <h2 className="section-title">{pc.homeEvents?.title || "Shows & Events"}</h2>
-          <p className="section-desc">{eventsDescription}</p>
+          <h2 className="section-title">{showingPastEvents ? "Recent Shows" : (pc.homeEvents?.title || "Shows & Events")}</h2>
+          <p className="section-desc">{showingPastEvents
+            ? "A look at where Carolyn's work has been showing. New dates are announced here and in the newsletter."
+            : eventsDescription}</p>
         </div>
         <div className="events-list">
           {displayEvents.map((evt) => {
@@ -796,24 +848,42 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                   <h4>{evt.title}</h4>
                   <p>{evt.location}</p>
                 </div>
-                {evt.rsvpUrl
-                  ? <a href={evt.rsvpUrl} className="event-action">RSVP</a>
-                  : <a href="#contact" className="event-action">Details</a>}
+                {showingPastEvents
+                  ? <span className="event-action" style={{ opacity:0.55, pointerEvents:"none" }}>Shown {d.toLocaleString("en", { month:"short", year:"numeric" })}</span>
+                  : evt.rsvpUrl
+                    ? <a href={evt.rsvpUrl} className="event-action">RSVP</a>
+                    : <a href="#contact" className="event-action">Details</a>}
               </div>
             );
           })}
         </div>
       </section>
+      )}
 
       {/* ═══ NEWSLETTER ═══ */}
       <div className="newsletter">
         <div className="nl-inner">
           <h3>{settings?.newsletterHeading || "Stay in the Studio"}</h3>
           <p>{settings?.newsletterText || "New works, behind-the-scenes stories, and exhibition announcements — delivered to your inbox."}</p>
-          <div className="newsletter-form">
-            <input type="email" placeholder="Your email address" aria-label="Email address" />
-            <button type="button">Subscribe</button>
-          </div>
+          {nlStatus === "sent" ? (
+            <p style={{ fontFamily:"var(--font-body)", color:"var(--terracotta)", marginTop:12 }}>
+              You&apos;re on the list — welcome to the studio.
+            </p>
+          ) : (
+            <>
+              <div className="newsletter-form">
+                <input type="email" placeholder="Your email address" aria-label="Email address"
+                  value={nlEmail} onChange={e => setNlEmail(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") submitNewsletter(); }} />
+                <button type="button" onClick={submitNewsletter} disabled={nlStatus === "sending"}>
+                  {nlStatus === "sending" ? "..." : "Subscribe"}
+                </button>
+              </div>
+              {nlStatus === "error" && (
+                <p style={{ fontFamily:"var(--font-body)", color:"#e2a18c", fontSize:"0.85rem", marginTop:8 }}>{nlError}</p>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -847,22 +917,43 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
               </div>
             </div>
             <div className="social-links">
-              {(artist?.socialLinks || [
-                { label:"TT", url:"#", platform:"TikTok" },
-                { label:"IG", url:"#", platform:"Instagram" },
-                { label:"SA", url:"#", platform:"Saatchi" },
-                { label:"FB", url:"#", platform:"Facebook" },
-              ]).map((s, i) => (
-                <a key={i} href={s.url || "#"} className="social-link magnetic" aria-label={s.platform}>{s.label}</a>
-              ))}
+              {(artist?.socialLinks || [])
+                .filter(s => {
+                  // Hide placeholder links: missing, "#", or a bare domain with no profile path
+                  if (!s.url || s.url === "#") return false;
+                  try { return new URL(s.url).pathname.length > 1; } catch { return false; }
+                })
+                .map((s, i) => (
+                  <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="social-link magnetic" aria-label={s.platform}>{s.label}</a>
+                ))}
             </div>
           </div>
           <div className="contact-form">
-            <input type="text"  placeholder="Your Name"   aria-label="Name" />
-            <input type="email" placeholder="Email Address" aria-label="Email" />
-            <input type="text"  placeholder="Subject — Commission, Purchase, Other" aria-label="Subject" />
-            <textarea placeholder="Tell me about what you're looking for..." aria-label="Message" />
-            <button className="btn-primary magnetic" type="button">Send Message</button>
+            {contactStatus === "sent" ? (
+              <div style={{ padding:"32px 24px", textAlign:"center" }}>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:"1.4rem", color:"var(--terracotta)", marginBottom:8 }}>Message sent</div>
+                <p style={{ fontFamily:"var(--font-body)", color:"var(--charcoal)", opacity:0.75 }}>
+                  Thank you — Carolyn will get back to you soon.
+                </p>
+              </div>
+            ) : (
+              <>
+                <input type="text"  placeholder="Your Name"   aria-label="Name"
+                  value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} />
+                <input type="email" placeholder="Email Address" aria-label="Email"
+                  value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} />
+                <input type="text"  placeholder="Subject — Commission, Purchase, Other" aria-label="Subject"
+                  value={contact.subject} onChange={e => setContact(c => ({ ...c, subject: e.target.value }))} />
+                <textarea placeholder="Tell me about what you're looking for..." aria-label="Message"
+                  value={contact.message} onChange={e => setContact(c => ({ ...c, message: e.target.value }))} />
+                {contactStatus === "error" && (
+                  <p style={{ fontFamily:"var(--font-body)", color:"#b0472e", fontSize:"0.85rem", margin:"0 0 4px" }}>{contactError}</p>
+                )}
+                <button className="btn-primary magnetic" type="button" onClick={submitContact} disabled={contactStatus === "sending"}>
+                  {contactStatus === "sending" ? "Sending..." : "Send Message"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -875,8 +966,8 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             <li><a href="/gallery">Gallery</a></li>
             <li><a href="/process">Process</a></li>
             <li><a href="/about">About</a></li>
-            <li><a href="#shop">Shop</a></li>
-            <li><a href="#community">Events</a></li>
+            {hasShop && <li><a href="#shop">Shop</a></li>}
+            {displayEvents.length > 0 && <li><a href="#community">Events</a></li>}
             <li><a href="#contact">Contact</a></li>
           </ul>
           <div className="footer-copy">{settings?.footerText || "© 2026 Palm Art Studio — Carolyn Jenkins. All rights reserved."}</div>

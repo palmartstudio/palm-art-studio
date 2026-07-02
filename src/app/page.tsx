@@ -8,7 +8,8 @@ import {
   websiteSchema,
 } from "../components/StructuredData";
 
-export const dynamic = "force-dynamic";
+// ISR: CMS edits appear within 60s; avoids hitting Sanity on every request
+export const revalidate = 60;
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "mwzx64sx",
@@ -25,7 +26,8 @@ async function getData() {
     client.fetch(`*[_type == "artistBio"][0]`).catch(() => null),
     client.fetch(`*[_type == "artwork"] | order(order asc)[0...6] { _id, title, medium, dimensions, price, status, "imageUrl": image.asset->url }`).catch(() => []),
     client.fetch(`*[_type == "shopItem"] | order(order asc)[0...4] { _id, title, medium, price, comparePrice, badge, "imageUrl": image.asset->url }`).catch(() => []),
-    client.fetch(`*[_type == "event"] | order(date asc)[0...6] { _id, title, date, location, rsvpUrl }`).catch(() => []),
+    // newest first, wide window — the client splits upcoming vs recent past
+    client.fetch(`*[_type == "event"] | order(date desc)[0...12] { _id, title, date, location, rsvpUrl }`).catch(() => []),
     client.fetch(`*[_type == "pageContent"][0]`).catch(() => null),
   ]);
 

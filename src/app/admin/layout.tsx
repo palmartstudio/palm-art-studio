@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     capable: true,
     title: "PAS Admin",
     statusBarStyle: "black-translucent",
-    startupImage: [{ url: "/icons/icon-512.png" }],
+    startupImage: [{ url: "/icons/icon-512x512.png" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
       </head>
       {children}
     </>

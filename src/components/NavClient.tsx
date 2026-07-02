@@ -6,11 +6,12 @@ interface NavProps {
   activeHref?: string;
 }
 
+// NOTE: re-add { href: "/#shop", label: "Shop" } once real shop items exist in the CMS —
+// the homepage only renders the #shop section when Sanity has shopItem documents.
 const NAV_ITEMS = [
   { href: "/gallery",    label: "Gallery" },
   { href: "/process",    label: "Process" },
   { href: "/about",      label: "About" },
-  { href: "/#shop",      label: "Shop" },
   { href: "/#community", label: "Events" },
   { href: "/#contact",   label: "Contact" },
 ];
