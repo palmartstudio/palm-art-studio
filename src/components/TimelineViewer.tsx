@@ -148,11 +148,11 @@ export default function TimelineViewer({
   if (ordered.length === 0) return null;
 
   return (
-    <div className="tl-root" style={{ position: "relative" }}>
+    <div className="tl-root" style={{ position: "relative", minWidth: 0, maxWidth: "100%" }}>
       <div
         ref={railRef}
         className={`tl-rail ${variant === "page" ? "tl-rail-page" : ""}`}
-        style={{ display: "flex", gap: 20, overflowX: "auto", paddingBottom: 8 }}
+        style={{ display: "flex", gap: 20, overflowX: "auto", paddingBottom: 8, minWidth: 0, maxWidth: "100%" }}
       >
         {ordered.map((step, i) => {
           const isFinal = step._key.startsWith("__final_") && artworkId;

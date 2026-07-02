@@ -156,7 +156,7 @@ body::after {
   .nav-links {
     position: fixed;
     inset: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     height: 100dvh;
     max-height: 100vh;
@@ -167,14 +167,17 @@ body::after {
     gap: 20px;
     background: #faf8f4;
     transform: translateX(100%);
-    transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+    /* visibility:hidden when closed so the off-canvas panel can't create
+       horizontal overflow (fixed elements escape body overflow-x:hidden) */
+    visibility: hidden;
+    transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1), visibility 0.45s;
     padding: calc(env(safe-area-inset-top) + 88px) 24px calc(env(safe-area-inset-bottom) + 24px);
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     z-index: 9999;
   }
-  .nav-links.open { transform: translateX(0); }
+  .nav-links.open { transform: translateX(0); visibility: visible; }
   .nav-links a { font-size: 1.2rem; letter-spacing: 0.1em; }
   .nav-cta {
     margin-top: 8px;

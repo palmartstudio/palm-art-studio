@@ -381,8 +381,9 @@ export default function GalleryPage() {
           cursor:"pointer",animation:"fadeIn 0.3s ease",
         }}>
           <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
-            .lightbox-inner{display:grid;grid-template-columns:1.3fr 1fr;}
-            @media(max-width:700px){.lightbox-inner{grid-template-columns:1fr;} .lightbox-art{aspect-ratio:4/3!important;max-height:260px;} .lightbox-detail{padding:24px 20px!important;} .lightbox-title{font-size:1.4rem!important;}}
+            .lightbox-inner{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);max-width:100%;}
+            .lightbox-inner > *{min-width:0;}
+            @media(max-width:700px){.lightbox-inner{grid-template-columns:minmax(0,1fr);} .lightbox-art{aspect-ratio:4/3!important;max-height:260px;} .lightbox-detail{padding:24px 20px!important;} .lightbox-title{font-size:1.4rem!important;}}
           `}</style>
           <div onClick={e => e.stopPropagation()} className="lightbox-inner" style={{
             maxWidth:900,width:"92%",
@@ -417,7 +418,7 @@ export default function GalleryPage() {
               </p>
 
               {selectedArt.processTimeline && selectedArt.processTimeline.length > 0 && (
-                <details open style={{marginBottom:24,borderTop:"1px solid rgba(245,240,232,0.1)",paddingTop:20}}>
+                <details open style={{marginBottom:24,borderTop:"1px solid rgba(245,240,232,0.1)",paddingTop:20,minWidth:0,maxWidth:"100%"}}>
                   <summary style={{
                     cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:"0.7rem",fontWeight:500,
                     letterSpacing:"0.15em",textTransform:"uppercase",color:"#C4A86E",marginBottom:16,
