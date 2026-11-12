@@ -1,6 +1,5 @@
 // ═══ Palm Art Studio — Email Utilities ═══
 import { supabaseAdmin } from "./supabase";
-import { NextRequest } from "next/server";
 
 // ── Brand Config ──
 const BRAND = {
@@ -14,10 +13,8 @@ const BRAND = {
   accentColor: "#C47D5A",
 };
 
-// ── Auth check (cookie-based) ──
-export function checkAdminAuth(req: NextRequest): boolean {
-  return req.cookies.get("pas_admin_session")?.value === "authenticated";
-}
+// ── Auth check (signed session cookie) — single implementation in adminAuth.ts ──
+export { checkAdminAuth } from "./adminAuth";
 
 // ── Types ──
 export type EmailFolder = "inbox" | "sent" | "drafts" | "trash" | "spam";

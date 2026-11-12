@@ -29,7 +29,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
   const pc = pageContent || {};
 
   // Contact form
-  const [contact, setContact] = useState({ name:"", email:"", subject:"", message:"" });
+  const [contact, setContact] = useState({ name:"", email:"", subject:"", message:"", website:"", artwork:"" });
   const [contactStatus, setContactStatus] = useState<"idle"|"sending"|"sent"|"error">("idle");
   const [contactError, setContactError] = useState("");
   const submitContact = useCallback(async () => {
@@ -944,6 +944,10 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                   value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} />
                 <input type="text"  placeholder="Subject — Commission, Purchase, Other" aria-label="Subject"
                   value={contact.subject} onChange={e => setContact(c => ({ ...c, subject: e.target.value }))} />
+                {/* Honeypot — hidden from people, filled by spam bots */}
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
+                  value={contact.website} onChange={e => setContact(c => ({ ...c, website: e.target.value }))}
+                  style={{ position:"absolute", left:"-9999px", width:1, height:1, opacity:0 }} />
                 <textarea placeholder="Tell me about what you're looking for..." aria-label="Message"
                   value={contact.message} onChange={e => setContact(c => ({ ...c, message: e.target.value }))} />
                 {contactStatus === "error" && (
