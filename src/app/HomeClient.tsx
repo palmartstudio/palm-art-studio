@@ -677,7 +677,20 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
 
       {/* ═══ HERO ═══ */}
-      <section ref={heroRef} className="hero" id="hero">
+      {/* ═══ STUDIO BANNER — Carolyn's palm collage + lettering (from PASbanner.pdf) ═══
+          The painting and the lettering are separate layers so the name stays
+          large and readable on a phone while the painting crops to fit. */}
+      <header className="studio-banner">
+        <picture>
+          <source type="image/webp" srcSet="/brand/banner-800.webp 800w, /brand/banner-1400.webp 1400w, /brand/banner-2400.webp 2400w" sizes="100vw" />
+          <img className="studio-banner-art" src="/brand/banner-1400.jpg" width={1400} height={840}
+            alt="Mixed-media palm tree collage by Carolyn Jenkins" fetchPriority="high" decoding="async" />
+        </picture>
+        <img className="studio-banner-mark" src="/brand/wordmark.png" width={2165} height={344}
+          alt="Palm Art Studio — Carolyn Jenkins" decoding="async" />
+      </header>
+
+      <section ref={heroRef} className="hero hero--after-banner" id="hero">
         <div className="hero-bg-element hero-bg-1" />
         <div className="hero-bg-element hero-bg-2" />
         <div className="hero-bg-element hero-bg-3" />
@@ -700,7 +713,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           <div className="hero-gallery">
             <div className="hero-frame hero-frame-1 h-frame">
               {(heroImages?.[0] || portraitUrl)
-                ? <img src={heroImages?.[0] || portraitUrl || ""} alt="Featured painting by Carolyn Jenkins" fetchPriority="high" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={heroImages?.[0] || portraitUrl || ""} alt="Featured painting by Carolyn Jenkins" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div className="hero-frame-inner"><span>Featured Artwork</span></div>}
             </div>
             <div className="hero-frame hero-frame-2 h-frame">
