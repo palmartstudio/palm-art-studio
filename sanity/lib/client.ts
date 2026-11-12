@@ -10,7 +10,8 @@ export const client = createClient({
   projectId: projectId || "placeholder",
   dataset,
   apiVersion,
-  useCdn: process.env.NODE_ENV === "production",
+  // API CDN can lag a few seconds behind a save; pages are ISR-cached already, so read live data.
+  useCdn: false,
   perspective: "published",
 });
 

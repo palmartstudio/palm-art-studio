@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "next-sanity";
 import { checkAdminAuth } from "../../../../lib/adminAuth";
+import { refreshSite } from "../../../../lib/refreshSite";
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "mwzx64sx",
@@ -60,6 +61,8 @@ export async function PATCH(req: NextRequest) {
         ...patch,
       });
     }
+
+    refreshSite();
 
     return NextResponse.json(result);
   } catch (e: any) {

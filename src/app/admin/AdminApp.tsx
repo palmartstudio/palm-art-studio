@@ -1498,6 +1498,31 @@ export default function AdminApp() {
 
   useEffect(() => { fetch("/api/admin/auth").then(r => { setAuthed(r.ok); }).catch(() => setAuthed(false)); }, []);
 
+  // If the session has ended (expired, or signed out by a security update), every
+  // save used to fail silently. Catch any 401 from the admin/email APIs, say so
+  // plainly, and return to the sign-in screen.
+  useEffect(() => {
+    const original = window.fetch;
+    let warned = false;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const res = await original(...args);
+      try {
+        const first = args[0];
+        const url = typeof first === "string" ? first : first instanceof URL ? first.pathname : (first as Request).url;
+        const isApi = url.includes("/api/admin/") || url.includes("/api/email/");
+        const isAuthCall = url.includes("/api/admin/auth");
+        if (res.status === 401 && isApi && !isAuthCall && !warned) {
+          warned = true;
+          alert("You have been signed out, so that last change was NOT saved. Please sign in again and make the change once more.");
+          setAuthed(false);
+          setTimeout(() => { warned = false; }, 4000);
+        }
+      } catch {}
+      return res;
+    };
+    return () => { window.fetch = original; };
+  }, []);
+
   useEffect(() => {
     if (!authed) return;
     Promise.all([

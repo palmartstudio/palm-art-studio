@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "next-sanity";
 import { checkAdminAuth } from "../../../../lib/adminAuth";
+import { refreshSite } from "../../../../lib/refreshSite";
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "mwzx64sx",
@@ -57,6 +58,8 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    refreshSite();
+
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
     } else {
       result = await client.createOrReplace({ _type: "siteSettings", _id: SETTINGS_ID, ...body });
     }
+    refreshSite();
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
