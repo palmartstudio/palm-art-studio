@@ -926,7 +926,7 @@ function SiteEditor() {
         "galleryPage.ctaBannerHeading": "Interested in a piece?",
         "galleryPage.ctaBannerDescription": "Originals, prints, and custom commissions available. Every piece ships with a certificate of authenticity.",
         "galleryPage.ctaPrimary": "Commission a Piece", "galleryPage.ctaSecondary": "Browse the Shop",
-        "settings.heroTitle": "Art from the Soul", "settings.heroSubtitle": "",
+        "settings.heroTitle": "A Florida Artist", "settings.heroTitleAccent": "with a Designer's Eye", "settings.heroSubtitle": "",
         "settings.newsletterHeading": "Stay in the Studio",
         "settings.newsletterText": "New works, behind-the-scenes stories, and exhibition announcements — delivered to your inbox.",
         "settings.footerText": "© 2026 Palm Art Studio — Carolyn Jenkins. All rights reserved.",
@@ -1117,7 +1117,8 @@ function SiteEditor() {
       {activePage === "homepage" && (
         <div>
           <EditorSection title="Hero Section" desc="The first thing visitors see" icon="🌅" defaultOpen>
-            {SF("heroTitle", "Hero Title")}
+            {SF("heroTitle", "Headline — first line")}
+            {SF("heroTitleAccent", "Headline — second line (shown in italics; leave empty to remove)")}
             {SF("heroSubtitle", "Hero Subtitle", true)}
             {PF("homeHero", "ctaPrimary", "Primary Button Text")}
             {PF("homeHero", "ctaSecondary", "Secondary Button Text")}

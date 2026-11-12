@@ -10,7 +10,7 @@ gsap.registerPlugin(ScrollTrigger, TextPlugin);
 interface Artwork { _id:string; slug?:string; title:string; medium?:string; dimensions?:string; price?:number; status?:string; imageUrl?:string; imageLqip?:string; }
 interface ShopItem { _id:string; title:string; medium?:string; price?:number; comparePrice?:number; badge?:string; imageUrl?:string; }
 interface Event { _id:string; title:string; date:string; location?:string; rsvpUrl?:string; }
-interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
+interface Settings { heroTitle?:string; heroTitleAccent?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
 interface Artist { name?:string; tagline?:string; studioLocation?:string; phone?:string; email?:string; quote?:string; portrait?:any; credentials?:{number:string;label:string}[]; commercialClients?:{name:string;description:string}[]; socialLinks?:{platform:string;url:string;label:string}[]; }
 
 interface PageContent { homeHero?:any; homeGallery?:any; homeAbout?:any; homeCommercial?:any; homeQuoteBanner?:any; homeShop?:any; homeEvents?:any; homeContact?:any; }
@@ -89,6 +89,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
 
   const artistName = artist?.name || "Carolyn Jenkins";
   const studioLocation = artist?.studioLocation || "Deltona, FL";
+  const heroTitle = (settings?.heroTitle || "").trim() || "A Florida Artist";
+  // undefined (never set) falls back to the default; an empty string means she removed the second line
+  const heroTitleAccent = settings?.heroTitleAccent === undefined || settings?.heroTitleAccent === null ? "with a Designer's Eye" : settings.heroTitleAccent.trim();
   const heroSubtitle = preferUpdatedCopy(
     settings?.heroSubtitle,
     "Original watercolors, acrylics, and mixed media from Carolyn Jenkins — each piece carries emotion, story, and soul.",
@@ -682,8 +685,9 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           <div className="hero-text">
             <div className="hero-eyebrow h-eyebrow">{artistName} · {studioLocation}</div>
             <h1 className="hero-title">
-              <span className="h-title-1" style={{ display:"block" }}>A Florida Artist</span>
-              <em className="h-title-2" style={{ display:"block" }}>with a Designer's Eye</em>
+              {/* Both lines are editable in Admin → Site Editor → Hero Section */}
+              <span className="h-title-1" style={{ display:"block" }}>{heroTitle}</span>
+              {heroTitleAccent && <em className="h-title-2" style={{ display:"block" }}>{heroTitleAccent}</em>}
             </h1>
             <p className="hero-subtitle h-sub">{heroSubtitle}</p>
             <div className="hero-actions h-actions">
