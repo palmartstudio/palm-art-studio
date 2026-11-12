@@ -6,8 +6,7 @@ interface NavProps {
   activeHref?: string;
 }
 
-// NOTE: re-add { href: "/#shop", label: "Shop" } once real shop items exist in the CMS —
-// the homepage only renders the #shop section when Sanity has shopItem documents.
+// NOTE: add { href: "/shop", label: "Shop" } here (and switch the CTA below) when the store ships.
 const NAV_ITEMS = [
   { href: "/gallery",    label: "Gallery" },
   { href: "/process",    label: "Process" },
@@ -68,7 +67,7 @@ export default function NavClient({ theme = "light", activeHref }: NavProps) {
             </a>
           </li>
         ))}
-        <li><a href="/#shop" className="nav-cta" onClick={handleLink}>Shop Prints</a></li>
+        <li><a href="/#contact" className="nav-cta" onClick={handleLink}>Commission a Piece</a></li>
       </ul>
     </nav>
   );

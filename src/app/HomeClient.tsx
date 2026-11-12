@@ -3,10 +3,11 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextPlugin } from "gsap/TextPlugin";
+import { sanityImg, sanitySrcSet, mediumLabel } from "../lib/img";
 
 gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
-interface Artwork { _id:string; title:string; medium?:string; dimensions?:string; price?:number; status?:string; imageUrl?:string; }
+interface Artwork { _id:string; slug?:string; title:string; medium?:string; dimensions?:string; price?:number; status?:string; imageUrl?:string; imageLqip?:string; }
 interface ShopItem { _id:string; title:string; medium?:string; price?:number; comparePrice?:number; badge?:string; imageUrl?:string; }
 interface Event { _id:string; title:string; date:string; location?:string; rsvpUrl?:string; }
 interface Settings { heroTitle?:string; heroSubtitle?:string; newsletterHeading?:string; newsletterText?:string; footerText?:string; announcementText?:string; announcementLink?:string; }
@@ -53,6 +54,17 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
       setContactError(e.message || "Something went wrong — please email cj@palmartstudio.com directly.");
     }
   }, [contact]);
+
+  // Arriving from an artwork's "Inquire" button (/?about=<title>#contact) pre-fills the subject
+  useEffect(() => {
+    try {
+      const about = new URLSearchParams(window.location.search).get("about");
+      if (about) {
+        const title = about.slice(0, 120);
+        setContact(c => ({ ...c, artwork: title, subject: c.subject || `Inquiry about "${title}"` }));
+      }
+    } catch {}
+  }, []);
 
   // Newsletter form
   const [nlEmail, setNlEmail] = useState("");
@@ -635,7 +647,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
     <div ref={mainRef}>
       {/* ═══ ANNOUNCEMENT BANNER ═══ */}
       {settings?.announcementText && (
-        <div style={{ background:"var(--terracotta)", color:"var(--warm-white)", textAlign:"center", padding:"10px 20px", fontSize:"0.78rem", fontFamily:"var(--font-body)", letterSpacing:"0.08em", position:"relative", zIndex:1001 }}>
+        <div style={{ background:"var(--terracotta)", color:"var(--warm-white)", textAlign:"center", padding:"10px 20px", fontSize:"0.85rem", fontFamily:"var(--font-body)", letterSpacing:"0.08em", position:"relative", zIndex:1001 }}>
           {settings.announcementLink
             ? <a href={settings.announcementLink} style={{ color:"inherit", textDecoration:"underline" }}>{settings.announcementText}</a>
             : settings.announcementText}
@@ -684,23 +696,23 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           <div className="hero-gallery">
             <div className="hero-frame hero-frame-1 h-frame">
               {(heroImages?.[0] || portraitUrl)
-                ? <img src={heroImages?.[0] || portraitUrl || ""} alt="Featured Artwork" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={heroImages?.[0] || portraitUrl || ""} alt="Featured painting by Carolyn Jenkins" fetchPriority="high" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div className="hero-frame-inner"><span>Featured Artwork</span></div>}
             </div>
             <div className="hero-frame hero-frame-2 h-frame">
               {heroImages?.[1]
-                ? <img src={heroImages[1]} alt="Recent Work" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={heroImages[1]} alt="Recent work by Carolyn Jenkins" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div className="hero-frame-inner"><span>Recent Work</span></div>}
             </div>
             <div className="hero-frame hero-frame-3 h-frame">
               {heroImages?.[2]
-                ? <img src={heroImages[2]} alt="Daily Study" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ? <img src={heroImages[2]} alt="Painting by Carolyn Jenkins" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div className="hero-frame-inner"><span>Daily Study</span></div>}
             </div>
           </div>
         </div>
         <div className="h-scroll-hint" style={{ position:"absolute", bottom:32, left:"50%", transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.5 }}>
-          <span style={{ fontFamily:"var(--font-body)", fontSize:"0.65rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--charcoal)" }}>Scroll</span>
+          <span style={{ fontFamily:"var(--font-body)", fontSize:"0.8rem", letterSpacing:"0.18em", textTransform:"uppercase", color:"var(--charcoal)" }}>Scroll</span>
           <div style={{ width:1, height:40, background:"var(--terracotta)", animation:"scrollPulse 2s ease-in-out infinite" }} />
         </div>
       </section>
@@ -714,16 +726,16 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         </div>
         <div className="gallery-grid">
           {displayArtwork.slice(0,6).map((item, i) => (
-            <a key={item._id} href="/gallery" className="gallery-item" style={{ display:"block", cursor:"pointer" }} aria-label={`View ${item.title} in the gallery`}>
-              <div className="gallery-item-bg">
+            <a key={item._id} href={item.slug ? `/gallery/${item.slug}` : "/gallery"} className="gallery-item" style={{ display:"block", cursor:"pointer" }} aria-label={`View ${item.title}`}>
+              <div className="gallery-item-bg" style={item.imageLqip ? { background:`url(${item.imageLqip}) center / cover no-repeat` } : undefined}>
                 {item.imageUrl
-                  ? <img src={item.imageUrl} alt={item.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ? <img src={sanityImg(item.imageUrl, 900)} srcSet={sanitySrcSet(item.imageUrl, [480, 900, 1400])} sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw" loading="lazy" decoding="async" alt={`${item.title}${item.medium ? ` — ${mediumLabel(item.medium)}` : ""} by Carolyn Jenkins`} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                   : <span className="gallery-placeholder">Artwork {i+1}</span>}
               </div>
               <div className="gallery-item-overlay">
                 <div className="gallery-item-title">{item.title}</div>
-                <div className="gallery-item-meta">{item.medium || "Mixed Media"}{item.dimensions ? ` · ${item.dimensions}` : ""}</div>
-                {item.price && <div className="gallery-item-price">${item.price.toLocaleString()}</div>}
+                <div className="gallery-item-meta">{mediumLabel(item.medium)}{item.dimensions ? ` · ${item.dimensions}` : ""}</div>
+                {item.status === "sold" ? <div className="gallery-item-price">Sold</div> : item.price ? <div className="gallery-item-price">${item.price.toLocaleString("en-US")}</div> : null}
               </div>
             </a>
           ))}
@@ -739,7 +751,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         <div className="about-grid">
           <div className="about-image">
             {portraitUrl
-              ? <img src={portraitUrl} alt={artistName} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+              ? <img src={portraitUrl} alt={`${artistName}, artist`} loading="lazy" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               : <div className="about-image-placeholder">Artist Portrait</div>}
           </div>
           <div className="about-body">
@@ -805,7 +817,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
             <div key={item._id} className="shop-card">
               <div className="shop-card-image">
                 {item.imageUrl
-                  ? <img src={item.imageUrl} alt={item.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ? <img src={sanityImg(item.imageUrl, 800)} srcSet={sanitySrcSet(item.imageUrl, [480, 800, 1200])} sizes="(max-width: 700px) 100vw, 25vw" loading="lazy" decoding="async" alt={item.title} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                   : <span className="gallery-placeholder">{item.title}</span>}
                 {item.badge && <div className="shop-card-badge">{item.badge}</div>}
               </div>
@@ -814,7 +826,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 <div className="shop-card-medium">{item.medium}</div>
                 <div className="shop-card-footer">
                   <div className="shop-card-price">
-                    {item.price ? `$${item.price.toLocaleString()}` : "Inquire"}
+                    {item.price ? `$${item.price.toLocaleString("en-US")}` : "Inquire"}
                     {item.comparePrice && <span className="original">${item.comparePrice}</span>}
                   </div>
                 </div>
@@ -837,19 +849,19 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         </div>
         <div className="events-list">
           {displayEvents.map((evt) => {
-            const d = new Date(evt.date + "T00:00:00");
+            const d = new Date(evt.date + "T00:00:00Z");
             return (
               <div key={evt._id} className="event-item">
                 <div className="event-date">
-                  <div className="event-month">{d.toLocaleString("en", { month:"short" })}</div>
-                  <div className="event-day">{String(d.getDate()).padStart(2,"0")}</div>
+                  <div className="event-month">{d.toLocaleString("en-US", { month:"short", timeZone:"UTC" })}</div>
+                  <div className="event-day">{String(d.getUTCDate()).padStart(2,"0")}</div>
                 </div>
                 <div className="event-info">
                   <h4>{evt.title}</h4>
                   <p>{evt.location}</p>
                 </div>
                 {showingPastEvents
-                  ? <span className="event-action" style={{ opacity:0.55, pointerEvents:"none" }}>Shown {d.toLocaleString("en", { month:"short", year:"numeric" })}</span>
+                  ? <span className="event-action" style={{ opacity:0.55, pointerEvents:"none" }}>Shown {d.toLocaleString("en-US", { month:"short", year:"numeric", timeZone:"UTC" })}</span>
                   : evt.rsvpUrl
                     ? <a href={evt.rsvpUrl} className="event-action">RSVP</a>
                     : <a href="#contact" className="event-action">Details</a>}
@@ -880,7 +892,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 </button>
               </div>
               {nlStatus === "error" && (
-                <p style={{ fontFamily:"var(--font-body)", color:"#e2a18c", fontSize:"0.85rem", marginTop:8 }}>{nlError}</p>
+                <p style={{ fontFamily:"var(--font-body)", color:"#e2a18c", fontSize:"0.9375rem", marginTop:8 }}>{nlError}</p>
               )}
             </>
           )}
@@ -951,7 +963,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
                 <textarea placeholder="Tell me about what you're looking for..." aria-label="Message"
                   value={contact.message} onChange={e => setContact(c => ({ ...c, message: e.target.value }))} />
                 {contactStatus === "error" && (
-                  <p style={{ fontFamily:"var(--font-body)", color:"#b0472e", fontSize:"0.85rem", margin:"0 0 4px" }}>{contactError}</p>
+                  <p style={{ fontFamily:"var(--font-body)", color:"#b0472e", fontSize:"0.9375rem", margin:"0 0 4px" }}>{contactError}</p>
                 )}
                 <button className="btn-primary magnetic" type="button" onClick={submitContact} disabled={contactStatus === "sending"}>
                   {contactStatus === "sending" ? "Sending..." : "Send Message"}
@@ -978,7 +990,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
         </div>
       </footer>
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scrollPulse { 0%,100%{opacity:.4;transform:scaleY(1)} 50%{opacity:1;transform:scaleY(1.15)} }
         @keyframes heroSafety { to { opacity: 1 !important; transform: none !important; } }
         .h-eyebrow, .h-title-1, .h-title-2, .h-sub, .h-actions > *, .h-frame {
@@ -989,7 +1001,7 @@ export default function HomeClient({ settings, artist, artwork, shopItems, event
           .hero-frame-2,.hero-frame-3{display:none}
           .hero-frame-1{width:90%;height:90%;top:5%;left:5%}
         }
-      `}</style>
+      ` }} />
     </div>
   );
 }

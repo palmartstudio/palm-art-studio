@@ -95,7 +95,8 @@ export function visualArtworkLd(a: ArtworkLdInput): JsonLd {
   const schema: JsonLd = {
     "@context": "https://schema.org",
     "@type": "VisualArtwork",
-    "@id": `${SITE_URL}/gallery#${slug || a._id}`,
+    "@id": `${SITE_URL}/gallery/${slug || a._id}#artwork`,
+    url: `${SITE_URL}/gallery/${slug || a._id}`,
     name: a.title,
     artMedium: a.medium,
     artworkSurface: a.dimensions,
@@ -110,6 +111,7 @@ export function visualArtworkLd(a: ArtworkLdInput): JsonLd {
       price: a.price,
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
+      url: `${SITE_URL}/gallery/${slug || a._id}`,
     };
   }
   return schema;

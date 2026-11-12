@@ -92,7 +92,7 @@ body::after {
 
 .nav-links a {
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -118,7 +118,7 @@ body::after {
 .nav-links a:hover { color: var(--terracotta); }
 
 .nav-cta {
-  font-size: 0.75rem !important;
+  font-size: 0.8125rem !important;
   letter-spacing: 0.14em !important;
   background: var(--charcoal);
   color: var(--warm-white) !important;
@@ -182,7 +182,7 @@ body::after {
   .nav-cta {
     margin-top: 8px;
     padding: 14px 40px !important;
-    font-size: 0.85rem !important;
+    font-size: 0.9375rem !important;
   }
 }
 
@@ -294,7 +294,7 @@ body::after {
 
 .hero-eyebrow {
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -356,7 +356,7 @@ body::after {
   align-items: center;
   gap: 10px;
   font-family: var(--font-body);
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -397,7 +397,7 @@ body::after {
   align-items: center;
   gap: 8px;
   font-family: var(--font-body);
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -493,7 +493,7 @@ body::after {
   font-family: var(--font-heading);
   font-style: italic;
   color: var(--mist);
-  font-size: 0.9rem;
+  font-size: 0.975rem;
   text-align: center;
   padding: 20px;
   position: relative;
@@ -544,7 +544,7 @@ section {
 
 .section-eyebrow {
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -660,7 +660,7 @@ section {
 
 .gallery-item-meta {
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold-light);
@@ -668,7 +668,7 @@ section {
 
 .gallery-item-price {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   color: var(--ivory);
   margin-top: 12px;
@@ -759,7 +759,7 @@ section {
 
 .about-body p {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.85;
   color: var(--espresso);
@@ -787,7 +787,7 @@ section {
 
 .credential-label {
   font-family: var(--font-body);
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -851,7 +851,7 @@ section {
 
 .quote-attr {
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -915,7 +915,7 @@ section {
   top: 16px;
   left: 16px;
   font-family: var(--font-body);
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -938,7 +938,7 @@ section {
 
 .shop-card-medium {
   font-family: var(--font-body);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--mist);
   letter-spacing: 0.05em;
   margin-bottom: 16px;
@@ -958,7 +958,7 @@ section {
 }
 
 .shop-card-price .original {
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   font-weight: 300;
   color: var(--mist);
   text-decoration: line-through;
@@ -1015,7 +1015,7 @@ section {
 
 .event-month {
   font-family: var(--font-body);
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -1039,14 +1039,14 @@ section {
 
 .event-info p {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   font-weight: 300;
   color: var(--mist);
 }
 
 .event-action {
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1140,7 +1140,7 @@ section {
 .newsletter-form input {
   flex: 1;
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   padding: 16px 20px;
   border: 1px solid rgba(245, 240, 232, 0.15);
   background: rgba(245, 240, 232, 0.06);
@@ -1153,7 +1153,7 @@ section {
 
 .newsletter-form button {
   font-family: var(--font-body);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1212,7 +1212,7 @@ section {
 
 .contact-detail-text a {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   color: var(--charcoal);
   text-decoration: none;
   transition: color 0.3s;
@@ -1220,7 +1220,7 @@ section {
 .contact-detail-text a:hover { color: var(--terracotta); }
 
 .contact-detail-text small {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--mist);
   display: block;
   margin-top: 2px;
@@ -1242,7 +1242,7 @@ section {
   color: var(--charcoal);
   text-decoration: none;
   transition: all 0.3s;
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   will-change: transform;
 }
 .social-link:hover {
@@ -1261,7 +1261,7 @@ section {
 .contact-form input,
 .contact-form textarea {
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.975rem;
   padding: 16px 20px;
   border: 1px solid var(--sand);
   background: var(--warm-white);
@@ -1311,7 +1311,7 @@ section {
 
 .footer-links a {
   font-family: var(--font-body);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--sand);
@@ -1327,7 +1327,7 @@ section {
   margin-top: 24px;
   border-top: 1px solid rgba(245, 240, 232, 0.08);
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   color: var(--mist);
   letter-spacing: 0.05em;
 }
@@ -1392,7 +1392,7 @@ section {
 }
 .commercial-card-desc {
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--mist);
   line-height: 1.6;
 }
@@ -1430,7 +1430,7 @@ section {
 
 .about-hero-subtitle {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.9375rem;
   font-weight: 400;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1469,7 +1469,7 @@ section {
 
 .about-story-body p {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.9;
   color: var(--espresso);
@@ -1521,7 +1521,7 @@ section {
 
 .about-commercial-text p {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.9;
   color: var(--sand);
@@ -1560,7 +1560,7 @@ section {
 
 .about-client-desc {
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 300;
   color: var(--mist);
   line-height: 1.6;
@@ -1588,7 +1588,7 @@ section {
 
 .about-fineart-text p {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.9;
   color: var(--espresso);
@@ -1640,7 +1640,7 @@ section {
 
 .about-personal-inner p {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.9;
   color: var(--espresso);
@@ -1807,7 +1807,7 @@ section {
     grid-column: 2;
     display: inline-block;
     padding: 8px 16px;
-    font-size: 0.65rem;
+    font-size: 0.8rem;
   }
   .event-day { font-size: 2rem; }
 
@@ -1912,4 +1912,79 @@ section {
   ::view-transition-new(*) {
     animation: none !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   READABILITY + TOUCH (added 2026-11)
+   - grey-on-cream captions were ~2:1 contrast; now ~5:1
+   - every link/button is at least 48px tall where fingers are used
+   - visible keyboard focus
+   ═══════════════════════════════════════════════════════════════ */
+:root { --ink-soft: #6B6157; }
+
+.credential-label,
+.event-info p,
+.contact-detail-text small,
+.commercial-card-desc,
+.shop-card-medium,
+.shop-card-price .original { color: var(--ink-soft); }
+
+.footer-copy { color: var(--sand); }
+.contact-form input::placeholder,
+.contact-form textarea::placeholder { color: var(--ink-soft); opacity: 1; }
+.newsletter-form input::placeholder { color: var(--sand); opacity: 1; }
+
+/* body copy on the homepage */
+.about-body p,
+.event-info p,
+.commercial-card-desc { font-size: 1.0625rem; line-height: 1.75; }
+.contact-form input,
+.contact-form textarea,
+.newsletter-form input { font-size: 1.0625rem; }
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--terracotta);
+  outline-offset: 3px;
+}
+
+.btn-primary, .btn-secondary, .nav-cta, .event-action,
+.newsletter-form button, .contact-form .btn-primary {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.contact-form input, .newsletter-form input { min-height: 52px; }
+.social-link { min-width: 48px; min-height: 48px; }
+.contact-detail-text a { display: inline-flex; align-items: center; min-height: 44px; }
+.menu-toggle { min-width: 48px; min-height: 48px; align-items: center; justify-content: center; }
+
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 6px;
+}
+
+@media (max-width: 900px) {
+  .nav-links { gap: 8px; }
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 20px;
+  }
+  .footer-links { row-gap: 0; }
+  .contact-form .btn-primary { align-self: stretch; }
+}
+
+/* horizontally scrolling filter row: no visible scrollbar strip */
+.filter-bar > div { scrollbar-width: none; }
+.filter-bar > div::-webkit-scrollbar { display: none; }
+@media (max-width: 600px) {
+  .footer-links { flex-wrap: wrap; justify-content: center; column-gap: 8px; }
 }

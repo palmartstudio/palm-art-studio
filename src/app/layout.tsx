@@ -5,8 +5,8 @@ import "./globals.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays enabled: people want to look closely at paintings, and
+  // blocking zoom is an accessibility failure.
   themeColor: "#0a0906",
 };
 

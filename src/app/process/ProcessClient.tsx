@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence, PanInfo } from "motion/react";
 import NavClient from "../../components/NavClient";
+import SiteFooter from "../../components/SiteFooter";
 import TimelineViewer, { TimelineStep } from "../../components/TimelineViewer";
 import { viewTransitionName } from "../../lib/viewTransitions";
 
@@ -115,7 +116,7 @@ export default function ProcessClient({
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 style={{
                   fontFamily: "'Outfit',sans-serif",
-                  fontSize: "0.7rem",
+                  fontSize: "0.8125rem",
                   fontWeight: 500,
                   letterSpacing: "0.2em",
                   textTransform: "uppercase",
@@ -182,7 +183,7 @@ export default function ProcessClient({
               <span style={{ fontSize: "clamp(2.5rem,8vw,3.5rem)", lineHeight: 1 }}>{items.length}</span>
               <span
                 style={{
-                  fontSize: "0.9rem",
+                  fontSize: "0.975rem",
                   color: "#B8AFA3",
                   fontFamily: "'Outfit',sans-serif",
                   fontWeight: 300,
@@ -277,7 +278,7 @@ export default function ProcessClient({
                           top: 14,
                           left: 14,
                           fontFamily: "'Outfit',sans-serif",
-                          fontSize: "0.6rem",
+                          fontSize: "0.8rem",
                           fontWeight: 700,
                           letterSpacing: "0.12em",
                           textTransform: "uppercase",
@@ -294,7 +295,7 @@ export default function ProcessClient({
                       <div
                         style={{
                           fontFamily: "'Outfit',sans-serif",
-                          fontSize: "0.65rem",
+                          fontSize: "0.8rem",
                           fontWeight: 500,
                           letterSpacing: "0.15em",
                           textTransform: "uppercase",
@@ -316,7 +317,7 @@ export default function ProcessClient({
                         {art.title}
                       </div>
                       {art.dimensions && (
-                        <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: "0.72rem", color: "#B8AFA3" }}>
+                        <div style={{ fontFamily: "'Outfit',sans-serif", fontSize: "0.8125rem", color: "#B8AFA3" }}>
                           {art.dimensions}
                         </div>
                       )}
@@ -352,7 +353,7 @@ export default function ProcessClient({
                       style={{
                         padding: "0 20px 18px",
                         fontFamily: "'Outfit',sans-serif",
-                        fontSize: "0.72rem",
+                        fontSize: "0.8125rem",
                         fontWeight: 500,
                         letterSpacing: "0.12em",
                         textTransform: "uppercase",
@@ -368,7 +369,7 @@ export default function ProcessClient({
           )}
         </div>
 
-        <style>{`
+        <style dangerouslySetInnerHTML={{ __html: `
           .proc-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -394,7 +395,7 @@ export default function ProcessClient({
             33% { transform: translate(30px, -20px) scale(1.05); }
             66% { transform: translate(-20px, 15px) scale(0.95); }
           }
-        `}</style>
+        ` }} />
       </section>
 
       {/* ═══ TAKEOVER ═══ */}
@@ -462,7 +463,7 @@ export default function ProcessClient({
               <div
                 style={{
                   fontFamily: "'Outfit',sans-serif",
-                  fontSize: "0.65rem",
+                  fontSize: "0.8rem",
                   fontWeight: 500,
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -487,7 +488,7 @@ export default function ProcessClient({
                 <div
                   style={{
                     fontFamily: "'Outfit',sans-serif",
-                    fontSize: "0.75rem",
+                    fontSize: "0.8125rem",
                     color: "#B8AFA3",
                     marginBottom: 24,
                     letterSpacing: "0.05em",
@@ -567,34 +568,7 @@ export default function ProcessClient({
         </div>
       </section>
 
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-logo">Palm Art Studio</div>
-          <ul className="footer-links">
-            <li>
-              <a href="/gallery">Gallery</a>
-            </li>
-            <li>
-              <a href="/process" aria-current="page">
-                Process
-              </a>
-            </li>
-            <li>
-              <a href="/about">About</a>
-            </li>
-            <li>
-              <a href="/#shop">Shop</a>
-            </li>
-            <li>
-              <a href="/#community">Events</a>
-            </li>
-            <li>
-              <a href="/#contact">Contact</a>
-            </li>
-          </ul>
-          <div className="footer-copy">&copy; 2026 Palm Art Studio &mdash; Carolyn Jenkins. All rights reserved.</div>
-        </div>
-      </footer>
+      <SiteFooter current="/process" />
     </div>
   );
 }

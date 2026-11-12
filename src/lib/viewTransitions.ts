@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
 
+// Always emit the property: branching on `document` made the server and browser
+// render different style attributes (a hydration mismatch). Browsers without
+// view transitions simply ignore it.
 export const viewTransitionName = (name: string): CSSProperties =>
-  typeof document !== "undefined" && "startViewTransition" in document
-    ? ({ viewTransitionName: name } as CSSProperties)
-    : {};
+  ({ viewTransitionName: name } as CSSProperties);
 
 export const supportsViewTimeline = (): boolean =>
   typeof window !== "undefined" &&

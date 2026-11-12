@@ -14,16 +14,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
   ];
 
-  // Pull artwork slugs so Google can discover individual works even before
-  // /gallery/[slug] routes exist. They'll deep-link to /gallery#art-<id> today
-  // and upgrade cleanly when per-artwork pages ship.
+  // One entry per artwork page.
   try {
-    const arts: Array<{ _updatedAt?: string; slug?: { current?: string } }> = await client.fetch(
-      `*[_type == "artwork" && defined(slug.current)]{_updatedAt, slug}`
+    const arts: Array<{ _id: string; _updatedAt?: string; slug?: string }> = await client.fetch(
+      `*[_type == "artwork" && defined(image.asset)]{ _id, _updatedAt, "slug": slug.current }`
     );
-    // No per-artwork route yet — skip dynamic entries to avoid 404s.
-    // Keep as no-op; flipping this on is a one-line change once slugs have pages.
-    void arts;
+    return [
+      ...staticRoutes,
+      ...arts.map((a) => ({
+        url: `${SITE_URL}/gallery/${a.slug || a._id}`,
+        lastModified: a._updatedAt ? new Date(a._updatedAt) : now,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      })),
+    ];
   } catch {
     // Sanity unreachable — static routes still ship.
   }

@@ -213,7 +213,7 @@ export default function TimelineViewer({
               <div
                 style={{
                   fontFamily: "'Outfit',sans-serif",
-                  fontSize: "0.68rem",
+                  fontSize: "0.8rem",
                   fontWeight: 600,
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -230,7 +230,7 @@ export default function TimelineViewer({
                 <div
                   style={{
                     fontFamily: "'Cormorant Garamond',serif",
-                    fontSize: "0.98rem",
+                    fontSize: "1.0625rem",
                     fontStyle: "italic",
                     color: c.muted,
                     lineHeight: 1.45,
@@ -243,7 +243,7 @@ export default function TimelineViewer({
                 <div
                   style={{
                     fontFamily: "'Outfit',sans-serif",
-                    fontSize: "0.7rem",
+                    fontSize: "0.8125rem",
                     color: c.dim,
                     letterSpacing: "0.05em",
                   }}
@@ -388,7 +388,7 @@ export default function TimelineViewer({
                 right: 0,
                 textAlign: "center",
                 fontFamily: "'Outfit',sans-serif",
-                fontSize: "0.7rem",
+                fontSize: "0.8125rem",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: "rgba(245,240,232,0.6)",
@@ -552,7 +552,7 @@ function TimelineVideo({
           background: "rgba(0,0,0,0.55)",
           color: "#F5F0E8",
           fontFamily: "'Outfit',sans-serif",
-          fontSize: "0.6rem",
+          fontSize: "0.8rem",
           letterSpacing: "0.15em",
           textTransform: "uppercase",
           fontWeight: 600,

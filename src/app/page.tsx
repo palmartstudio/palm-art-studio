@@ -24,7 +24,7 @@ async function getData() {
   const [settings, artist, artwork, shopItems, events, pageContent] = await Promise.all([
     client.fetch(`*[_type == "siteSettings"][0]`).catch(() => null),
     client.fetch(`*[_type == "artistBio"][0]`).catch(() => null),
-    client.fetch(`*[_type == "artwork"] | order(order asc)[0...6] { _id, title, medium, dimensions, price, status, "imageUrl": image.asset->url }`).catch(() => []),
+    client.fetch(`*[_type == "artwork"] | order(order asc)[0...6] { _id, title, "slug": slug.current, medium, dimensions, price, status, "imageUrl": image.asset->url, "imageLqip": image.asset->metadata.lqip }`).catch(() => []),
     client.fetch(`*[_type == "shopItem"] | order(order asc)[0...4] { _id, title, medium, price, comparePrice, badge, "imageUrl": image.asset->url }`).catch(() => []),
     // newest first, wide window — the client splits upcoming vs recent past
     client.fetch(`*[_type == "event"] | order(date desc)[0...12] { _id, title, date, location, rsvpUrl }`).catch(() => []),
@@ -34,7 +34,7 @@ async function getData() {
   let portraitUrl: string | null = null;
   if (artist?.portrait?.asset) {
     try {
-      portraitUrl = builder.image(artist.portrait).width(800).height(1000).fit("crop").url();
+      portraitUrl = builder.image(artist.portrait).width(800).height(1000).fit("crop").auto("format").quality(75).url();
     } catch {}
   }
 
@@ -42,7 +42,7 @@ async function getData() {
   const heroImages: (string | null)[] = [null, null, null];
   ["heroImage1", "heroImage2", "heroImage3"].forEach((key, i) => {
     if (settings?.[key]?.asset) {
-      try { heroImages[i] = builder.image(settings[key]).width(600).height(750).fit("crop").url(); } catch {}
+      try { heroImages[i] = builder.image(settings[key]).width(800).height(1000).fit("crop").auto("format").quality(75).url(); } catch {}
     }
   });
 
