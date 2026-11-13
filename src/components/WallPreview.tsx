@@ -98,6 +98,18 @@ function WallPreviewModal(p: WallPreviewProps & { onClose: () => void }) {
   // do it switch to the live camera tab automatically; everything else stays
   // on the room photo, which works everywhere.
   const userChoseMode = useRef(false);
+  const [arFailed, setArFailed] = useState(false);
+  // Phones open on the camera tab; it runs inside the page, so it works in any browser.
+  useEffect(() => {
+    const phone = window.matchMedia?.("(pointer: coarse)").matches && !!navigator.mediaDevices?.getUserMedia;
+    if (phone && !userChoseMode.current) setMode("live");
+  }, []);
+  // If the phone's own AR app can't open, the viewer sends the page back with this marker.
+  useEffect(() => {
+    const onHash = () => { if (window.location.hash.includes("model-viewer-no-ar-fallback")) setArFailed(true); };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   useEffect(() => {
     if (!viewerReady) return;
     let tries = 0;
@@ -105,7 +117,6 @@ function WallPreviewModal(p: WallPreviewProps & { onClose: () => void }) {
       tries++;
       if (mvRef.current?.canActivateAR === true) {
         setArSupport("yes");
-        if (!userChoseMode.current) setMode("live");
         clearInterval(t);
       } else if (tries > 16) {
         setArSupport("no");
@@ -147,48 +158,33 @@ function WallPreviewModal(p: WallPreviewProps & { onClose: () => void }) {
           </div>
         )}
 
-        {/* The 3D viewer stays mounted (hidden in photo mode) so AR support can be detected. */}
-        <div className="wp-live" style={{ display: mode === "live" ? "flex" : "none" }}>
-          <div className="wp-stage3d">
-            {viewerReady
-              ? createElement("model-viewer", {
-                  ref: mvRef,
-                  src: glbUrl,
-                  alt: `${p.title}, ${sizeLabel}, shown as a 3D model`,
-                  ar: "",
-                  "ar-modes": "scene-viewer webxr quick-look",
-                  "ar-placement": "wall",
-                  "ar-scale": "fixed",
-                  "camera-controls": "",
-                  "touch-action": "pan-y",
-                  "shadow-intensity": "0.7",
-                  "camera-orbit": "20deg 80deg auto",
-                  "interaction-prompt": "none",
-                  style: { width: "100%", height: "100%", background: "transparent" },
-                })
-              : <div className="wp-loading">Loading the 3D view…</div>}
-          </div>
-          {arSupport === "yes" && (
-            <>
-              <button type="button" className="wp-cta" onClick={startAR}>Open Camera &amp; Hang It on My Wall</button>
-              <ol className="wp-steps">
-                <li>Stand back and point your phone at the wall.</li>
-                <li>Move the phone slowly side to side until the painting appears.</li>
-                <li>Drag it where you want it. It is shown at its real size.</li>
-              </ol>
-              <p className="wp-hint">Plain, empty walls are hard for a camera to read. If it won&apos;t stick, aim near a corner, a light switch or other pictures — or use <button type="button" onClick={() => choose("photo")}>Room photo</button> instead.</p>
-            </>
-          )}
-          {arSupport === "checking" && <p className="wp-hint">Checking whether this device can do a live camera view…</p>}
-          {arSupport === "no" && (
-            <p className="wp-hint">
-              The live camera view needs a recent iPhone, iPad or Android phone. On this device, use{" "}
-              <button type="button" onClick={() => choose("photo")}>Room photo</button> — or open this page on your phone.
-            </p>
-          )}
-        </div>
+        {mode === "live" && <PhotoRoom key="camera" camera {...p} frame={frame} />}
+        {mode === "photo" && <PhotoRoom key="photo" {...p} frame={frame} />}
 
-        {mode === "photo" && <PhotoRoom {...p} frame={frame} />}
+        {/* The 3D viewer stays mounted but out of sight: it detects whether the phone has
+            its own AR app and hands the model to it. The camera view above never depends on it. */}
+        <div className="wp-mv" aria-hidden="true">
+          {viewerReady && createElement("model-viewer", {
+            ref: mvRef,
+            src: glbUrl,
+            ar: "",
+            "ar-modes": "scene-viewer quick-look",
+            "ar-placement": "wall",
+            "ar-scale": "fixed",
+            "interaction-prompt": "none",
+            style: { width: "100%", height: "100%" },
+          })}
+        </div>
+        {mode === "live" && arSupport === "yes" && !arFailed && (
+          <div className="wp-extra">
+            <button type="button" className="wp-file" onClick={startAR}>Try 3D View (exact size)</button>
+            <p className="wp-hint">Optional, for newer phones: opens your phone&apos;s own 3D viewer and pins the painting to the wall at its exact size. If nothing opens, just use the camera view above.</p>
+          </div>
+        )}
+        {mode === "live" && arFailed && (
+          <p className="wp-hint wp-extra">The 3D viewer isn&apos;t available on this phone — the camera view above does the same job.</p>
+        )}
+
       </div>
     </div>
   );
@@ -196,7 +192,17 @@ function WallPreviewModal(p: WallPreviewProps & { onClose: () => void }) {
 
 // ───────────────────────── Photo / sample-room mode ─────────────────────────
 
-function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
+// Typical phone main camera: about 63° across the long side of the video frame.
+const CAMERA_FOV_TAN = Math.tan((63 / 2) * Math.PI / 180);
+
+function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle; camera?: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [live, setLive] = useState(false);
+  const [vid, setVid] = useState({ w: 0, h: 0 });
+  const [camErr, setCamErr] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [distFt, setDistFt] = useState(8); // how far the visitor stands from the wall
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const artImg = useRef<HTMLImageElement | null>(null);
@@ -223,7 +229,9 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
     if (!el) return;
     const measure = () => {
       const w = el.clientWidth;
-      const h = Math.round(Math.min(window.innerHeight * 0.52, w * 0.72));
+      const h = p.camera
+        ? Math.round(Math.max(320, window.innerHeight * 0.6))
+        : Math.round(Math.min(window.innerHeight * 0.52, w * 0.72));
       setSize({ w, h: Math.max(240, h) });
     };
     measure();
@@ -231,21 +239,68 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
     ro.observe(el);
     window.addEventListener("resize", measure);
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
+  }, [p.camera]);
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setLive(false);
   }, []);
+  useEffect(() => stopCamera, [stopCamera]);
+
+  const startCamera = async () => {
+    setCamErr(""); setStarting(true);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const v = videoRef.current;
+      if (!v) throw new Error("no video");
+      v.srcObject = stream;
+      await v.play();
+      setVid({ w: v.videoWidth, h: v.videoHeight });
+      setPos({ x: 0.5, y: 0.4 });
+      setLive(true);
+    } catch (e: any) {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      const denied = e?.name === "NotAllowedError" || e?.name === "SecurityError";
+      setCamErr(denied
+        ? "The camera is blocked for this site. Allow camera access in your browser, or use the Room photo tab and take a picture of your wall instead."
+        : "The camera couldn't be opened on this device. Use the Room photo tab and take a picture of your wall instead.");
+    } finally { setStarting(false); }
+  };
 
   const geometry = useCallback((W: number, H: number) => {
-    const ppi = W / (spanFt * 12); // pixels per inch
+    let ppi = W / (spanFt * 12); // pixels per inch
+    if (live && vid.w && vid.h) {
+      // live camera: size from how far away the wall is and the camera's field of view
+      const focalPx = (Math.max(vid.w, vid.h) / 2) / CAMERA_FOV_TAN;
+      ppi = (focalPx * Math.max(W / vid.w, H / vid.h)) / (distFt * 12);
+    }
     const frameIn = p.framed || p.frame === "none" ? 0 : p.frameWidthIn;
     const aw = p.widthIn * ppi, ah = p.heightIn * ppi, f = frameIn * ppi;
     const cx = pos.x * W, cy = pos.y * H;
     return { ppi, aw, ah, f, cx, cy, floorY: H * 0.8 };
-  }, [spanFt, pos, p.widthIn, p.heightIn, p.frameWidthIn, p.framed, p.frame]);
+  }, [spanFt, pos, p.widthIn, p.heightIn, p.frameWidthIn, p.framed, p.frame, live, vid, distFt]);
 
-  const draw = useCallback((ctx: CanvasRenderingContext2D, W: number, H: number) => {
+  const draw = useCallback((ctx: CanvasRenderingContext2D, W: number, H: number, forExport = false) => {
     const g = geometry(W, H);
     ctx.clearRect(0, 0, W, H);
 
-    if (hasPhoto && roomImg.current) {
+    if (p.camera) {
+      // the live video shows through the canvas; it is only painted in for a saved picture
+      const v = videoRef.current;
+      if (forExport && live && v && v.videoWidth) {
+        const s = Math.max(W / v.videoWidth, H / v.videoHeight);
+        const dw = v.videoWidth * s, dh = v.videoHeight * s;
+        ctx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      }
+      if (!live) return;
+    } else if (hasPhoto && roomImg.current) {
       // cover-fit the visitor's photo
       const im = roomImg.current;
       const s = Math.max(W / im.naturalWidth, H / im.naturalHeight);
@@ -285,7 +340,7 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
       ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = Math.max(1, g.f * 0.08);
       ctx.strokeRect(x + g.f, y + g.f, g.aw, g.ah);
     }
-  }, [geometry, hasPhoto, wall, p.frame]);
+  }, [geometry, hasPhoto, wall, p.frame, p.camera, live]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -300,13 +355,13 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
 
   // In the sample room, start the piece centred above the sofa at a natural hanging height.
   useEffect(() => {
-    if (hasPhoto || !size.h) return;
+    if (hasPhoto || p.camera || !size.h) return;
     const ppi = size.w / (spanFt * 12);
     const floorY = size.h * 0.8;
     const centreFromFloor = Math.max(58, 33 + 8 + p.heightIn / 2); // eye level, but clear of the sofa
     const y = (floorY - centreFromFloor * ppi) / size.h;
     setPos({ x: 0.5, y: Math.max(0.5 * (p.heightIn * ppi) / size.h + 0.03, y) });
-  }, [hasPhoto, size.w, size.h, spanFt, p.heightIn]);
+  }, [hasPhoto, p.camera, size.w, size.h, spanFt, p.heightIn]);
 
   const onDown = (e: React.PointerEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -340,8 +395,19 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
   const useSample = () => { roomImg.current = null; setHasPhoto(false); setSpanFt(sampleSpan); };
 
   const save = async () => {
-    const c = canvasRef.current;
+    let c = canvasRef.current;
     if (!c) return;
+    if (p.camera) {
+      // compose the current camera frame and the painting into one picture
+      const out = document.createElement("canvas");
+      out.width = c.width; out.height = c.height;
+      const octx = out.getContext("2d");
+      if (!octx) return;
+      const dpr = c.width / size.w;
+      octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw(octx, size.w, size.h, true);
+      c = out;
+    }
     c.toBlob(async (blob) => {
       if (!blob) return;
       const name = `${p.slug}-on-my-wall.jpg`;
@@ -359,14 +425,42 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
   return (
     <div className="wp-photo">
       <div ref={wrapRef} className="wp-stage">
+        {p.camera && <video ref={videoRef} className="wp-video" playsInline muted autoPlay style={{ opacity: live ? 1 : 0 }} />}
         <canvas
           ref={canvasRef}
-          style={{ width: size.w || "100%", height: size.h || 300, touchAction: "none", cursor: "grab", display: "block" }}
+          style={{ width: size.w || "100%", height: size.h || 300, touchAction: "none", cursor: "grab", display: "block", position: "relative" }}
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
           aria-label={`${p.title} shown on a wall. Drag to move it.`}
         />
         {!artReady && <div className="wp-loading wp-loading-abs">Loading the painting…</div>}
+        {p.camera && !live && (
+          <div className="wp-camstart">
+            <button type="button" className="wp-cta" onClick={startCamera} disabled={starting}>{starting ? "Opening the camera…" : "Turn On Camera"}</button>
+            <p className="wp-hint">{camErr || "Your browser will ask to use the camera. Point it at your wall and the painting appears on top. Nothing is recorded or uploaded."}</p>
+          </div>
+        )}
       </div>
+
+      {p.camera ? (
+        <>
+          {live && (
+            <>
+              <div className="wp-controls">
+                <button type="button" className="wp-file wp-file-primary" onClick={save}>Save / Share Picture</button>
+                <button type="button" className="wp-file" onClick={stopCamera}>Turn Camera Off</button>
+              </div>
+              <div className="wp-scale">
+                <label htmlFor="wp-dist">
+                  <strong>Make it true to size:</strong> about how far are you standing from the wall?
+                  <b> {formatInches(distFt)} ft</b>
+                </label>
+                <input id="wp-dist" type="range" min={3} max={20} step={0.5} value={distFt} onChange={(e) => setDistFt(Number(e.target.value))} />
+                <p className="wp-hint">Drag the painting to move it. The size is a close estimate — one big step is about 3 ft.</p>
+              </div>
+            </>
+          )}
+        </>
+      ) : (<>
 
       <div className="wp-controls">
         <label className="wp-file wp-file-primary">
@@ -401,6 +495,7 @@ function PhotoRoom(p: WallPreviewProps & { frame: FrameStyle }) {
           <p className="wp-hint">Shown at true size next to a 7-foot sofa. Drag the painting to move it, or use a photo of your own wall.</p>
         </div>
       )}
+      </>)}
     </div>
   );
 }
@@ -443,6 +538,12 @@ const CSS = `
 .wp-loading{display:flex;align-items:center;justify-content:center;height:100%;color:#B8AFA3;font-size:1rem;}
 .wp-loading-abs{position:absolute;inset:0;pointer-events:none;}
 .wp-stage{position:relative;background:#1c1915;overflow:hidden;}
+.wp-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.wp-camstart{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:radial-gradient(ellipse at 50% 40%,#3a342d,#1c1915);}
+.wp-camstart .wp-hint{max-width:440px;}
+.wp-cta:disabled{opacity:0.7;}
+.wp-mv{position:absolute;width:2px;height:2px;overflow:hidden;opacity:0;pointer-events:none;}
+.wp-extra{display:flex;flex-direction:column;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(245,240,232,0.15);}
 .wp-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:12px 0;}
 .wp-file{display:flex;align-items:center;justify-content:center;min-height:52px;padding:10px 14px;border:1px solid rgba(245,240,232,0.3);background:none;color:#F5F0E8;font:inherit;font-size:1rem;text-align:center;cursor:pointer;}
 .wp-file-primary{background:#C47D5A;border-color:#C47D5A;font-weight:600;}
