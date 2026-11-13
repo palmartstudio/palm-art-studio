@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "next-sanity";
 import { checkAdminAuth } from "../../../../lib/adminAuth";
 import { refreshSite } from "../../../../lib/refreshSite";
+import { normCrop } from "../../../../lib/wall";
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "mwzx64sx",
@@ -16,7 +17,7 @@ export async function GET() {
   try {
     const artworks = await client.fetch(`*[_type == "artwork"] | order(order asc) {
       _id, title, slug, medium, dimensions, year, description, status, price,
-      printPrice, featured, category, order,
+      printPrice, featured, category, order, wallCrop, wallFramed,
       "imageUrl": image.asset->url,
       "imageLqip": image.asset->metadata.lqip,
       processTimeline[]{
@@ -63,6 +64,8 @@ export async function POST(req: NextRequest) {
       description: rest.description || undefined,
       order: 0,
     };
+    if (rest.wallCrop) doc.wallCrop = normCrop(rest.wallCrop);
+    if (rest.wallFramed !== undefined) doc.wallFramed = !!rest.wallFramed;
 
     if (rest.title) {
       doc.slug = {
@@ -119,6 +122,7 @@ export async function PATCH(req: NextRequest) {
     if (!_id) return NextResponse.json({ error: "Missing _id" }, { status: 400 });
 
     const patch: Record<string, unknown> = {};
+    const unset: string[] = [];
     if (rest.title !== undefined) patch.title = rest.title;
     if (rest.medium !== undefined) patch.medium = rest.medium;
     if (rest.dimensions !== undefined) patch.dimensions = rest.dimensions;
@@ -128,6 +132,9 @@ export async function PATCH(req: NextRequest) {
     if (rest.category !== undefined) patch.category = rest.category;
     if (rest.featured !== undefined) patch.featured = !!rest.featured;
     if (rest.description !== undefined) patch.description = rest.description;
+    // Wall-preview crop: stored separately, never changes the image itself.
+    if (rest.wallCrop !== undefined) { if (rest.wallCrop) patch.wallCrop = normCrop(rest.wallCrop); else unset.push("wallCrop"); }
+    if (rest.wallFramed !== undefined) patch.wallFramed = !!rest.wallFramed;
 
     if (imageAssetId) {
       patch.image = {
@@ -160,7 +167,9 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    const result = await client.patch(_id).set(patch).commit();
+    let tx = client.patch(_id).set(patch);
+    if (unset.length) tx = tx.unset(unset);
+    const result = await tx.commit();
     refreshSite();
     return NextResponse.json(result);
   } catch (e: any) {

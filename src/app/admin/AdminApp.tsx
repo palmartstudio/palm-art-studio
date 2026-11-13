@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import WallCropEditor from "./WallCropEditor";
 const AdminInbox = dynamic(() => import("./AdminInbox"), { ssr: false, loading: () => <div style={{ color: "#8B7F72", padding: 60, textAlign: "center" }}>Loading email client...</div> });
 
 // ─── Tab types ───
@@ -36,6 +37,8 @@ interface Artwork {
   status?: string; category?: string; year?: number; featured?: boolean;
   description?: string; imageUrl?: string; image?: { asset: { _ref: string } }; slug?: { current: string };
   processTimeline?: TimelineStepForm[];
+  wallCrop?: { left: number; top: number; right: number; bottom: number } | null;
+  wallFramed?: boolean;
 }
 const STAGE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "", label: "— Stage —" },
@@ -405,7 +408,8 @@ function ArtworkModal({ artwork, onClose, onSave }: {
   const [imagePreview, setImagePreview] = useState<string | undefined>(artwork?.imageUrl);
   const [saving, setSaving] = useState(false);
   const set = (k: keyof Artwork, v: unknown) => setForm(p => ({ ...p, [k]: v }));
-  const handleImage = (f: File) => { setImageFile(f); const r = new FileReader(); r.onload = e => setImagePreview(e.target?.result as string); r.readAsDataURL(f); };
+  // a new picture means the old wall-preview crop no longer fits
+  const handleImage = (f: File) => { setImageFile(f); setForm(p => ({ ...p, wallCrop: null, wallFramed: false })); const r = new FileReader(); r.onload = e => setImagePreview(e.target?.result as string); r.readAsDataURL(f); };
   const handleSave = async () => {
     if (!form.title) return alert("Title is required");
     setSaving(true); try { await onSave(form, imageFile); } finally { setSaving(false); }
@@ -448,6 +452,16 @@ function ArtworkModal({ artwork, onClose, onSave }: {
           <label style={labelStyle}>Image</label>
           {imagePreview && <div style={{ marginBottom: 12, borderRadius: 10, overflow: "hidden", maxHeight: 200 }}><img src={imagePreview} alt="" style={{ width: "100%", height: 200, objectFit: "cover" }} /></div>}
           <UploadZone onFile={handleImage} uploading={false} progress={0} />
+        </div>
+        <div style={{ marginBottom: 20, borderTop: `1px solid ${C.border2}`, paddingTop: 20 }}>
+          <label style={labelStyle}>See It on Your Wall — crop</label>
+          <WallCropEditor
+            imageUrl={imagePreview}
+            dimensions={form.dimensions}
+            crop={form.wallCrop}
+            framed={!!form.wallFramed}
+            onChange={(next) => setForm(p => ({ ...p, wallCrop: next.wallCrop, wallFramed: next.wallFramed }))}
+          />
         </div>
         <div style={{ marginBottom: 20, borderTop: `1px solid ${C.border2}`, paddingTop: 20 }}>
           <label style={labelStyle}>Creation Timeline</label>

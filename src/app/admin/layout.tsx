@@ -9,11 +9,16 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+// All head tags go through the metadata API. This layout used to render its own
+// <head> element inside <body>, which is invalid HTML and made React throw a
+// hydration error and re-render the whole admin on every load.
 export const metadata: Metadata = {
   title: "Palm Art Studio — Admin",
   description: "Palm Art Studio admin dashboard",
   robots: { index: false, follow: false },
   manifest: "/manifest.json",
+  formatDetection: { telephone: false },
+  icons: { apple: [{ url: "/icons/icon-180x180.png", sizes: "180x180" }] },
   appleWebApp: {
     capable: true,
     title: "PAS Admin",
@@ -22,20 +27,10 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
   },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
-      </head>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

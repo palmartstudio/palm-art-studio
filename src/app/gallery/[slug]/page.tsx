@@ -7,6 +7,8 @@ import SiteFooter from "../../../components/SiteFooter";
 import TimelineViewer from "../../../components/TimelineViewer";
 import { JsonLdScript, breadcrumbList, visualArtworkLd } from "../../../components/StructuredData";
 import { sanityImg, sanitySrcSet, mediumLabel } from "../../../lib/img";
+import WallPreview from "../../../components/WallPreview";
+import { frameWidthIn, wallSpec } from "../../../lib/wall";
 
 // One real, shareable, indexable page per artwork. This is also where the
 // Buy button will live when the store ships.
@@ -15,7 +17,7 @@ export const revalidate = 60;
 const SITE_URL = "https://palmartstudio.com";
 
 const artworkQuery = groq`*[_type == "artwork" && (slug.current == $slug || _id == $slug)][0]{
-  _id, title, slug, medium, dimensions, year, description, status, price, printPrice, category,
+  _id, title, slug, medium, dimensions, year, description, status, price, printPrice, category, wallCrop, wallFramed,
   "imageUrl": image.asset->url,
   "imageLqip": image.asset->metadata.lqip,
   "imageDims": image.asset->metadata.dimensions{width, height},
@@ -95,6 +97,11 @@ export default async function ArtworkPage({ params }: { params: { slug: string }
   const timeline = Array.isArray(a.processTimeline) ? a.processTimeline.filter((t: any) => t?.imageUrl || t?.videoUrl) : [];
   const extras: { url: string; lqip?: string }[] = Array.isArray(a.additionalImages) ? a.additionalImages.filter((x: any) => x?.url) : [];
   const ratio = a.imageDims?.width && a.imageDims?.height ? `${a.imageDims.width} / ${a.imageDims.height}` : "4 / 3";
+
+  // True-size wall preview: needs a parseable size in the Dimensions field.
+  const wall = a.imageUrl
+    ? wallSpec({ dimensions: a.dimensions, imgW: a.imageDims?.width, imgH: a.imageDims?.height, wallCrop: a.wallCrop, wallFramed: a.wallFramed })
+    : null;
 
   let others: any[] = [];
   try {
@@ -183,8 +190,23 @@ export default async function ArtworkPage({ params }: { params: { slug: string }
               ))}
             </dl>
 
-            {canInquire && (
+            {wall && (
               <div className="ap-actions">
+                <WallPreview
+                  title={a.title}
+                  slug={slug}
+                  textureUrl={`/ar/${encodeURIComponent(slug)}/art-${wall.version}.jpg`}
+                  widthIn={wall.widthIn}
+                  heightIn={wall.heightIn}
+                  framed={wall.framed}
+                  frameWidthIn={frameWidthIn(wall)}
+                  version={wall.version}
+                />
+              </div>
+            )}
+
+            {canInquire && (
+              <div className="ap-actions ap-actions-tight">
                 <a href={inquireHref} className="ap-btn ap-btn-primary">
                   {isSold ? "Commission Something Similar" : "Inquire About This Piece"}
                 </a>
@@ -274,6 +296,7 @@ export default async function ArtworkPage({ params }: { params: { slug: string }
         .ap-facts dt{color:#B8AFA3;letter-spacing:0.04em;}
         .ap-facts dd{margin:0;color:#F5F0E8;text-align:right;}
         .ap-actions{display:flex;flex-direction:column;gap:12px;margin-top:28px;}
+        .ap-actions-tight{margin-top:12px;}
         .ap-btn{display:flex;align-items:center;justify-content:center;min-height:54px;padding:14px 26px;font-family:'Outfit',sans-serif;font-size:0.95rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;text-align:center;transition:background .25s,color .25s,border-color .25s;}
         .ap-btn-primary{background:#C47D5A;color:#FFFDF9;}
         .ap-btn-primary:hover{background:#D08A66;}

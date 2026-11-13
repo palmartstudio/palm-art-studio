@@ -168,6 +168,19 @@ export default defineType({
         ],
       },
     }),
+    defineField({
+      name: "wallCrop",
+      title: "Wall preview crop",
+      description: "Which part of the photo is the piece itself. Only used by See it on your wall. Set it with the crop tool in the admin app.",
+      type: "object",
+      fields: [
+        defineField({ name: "left", type: "number" }),
+        defineField({ name: "top", type: "number" }),
+        defineField({ name: "right", type: "number" }),
+        defineField({ name: "bottom", type: "number" }),
+      ],
+    }),
+    defineField({ name: "wallFramed", title: "Wall preview: photo shows the real frame", type: "boolean", initialValue: false }),
     defineField({ name: "order", title: "Sort Order", type: "number", initialValue: 0 }),
   ],
   orderings: [
